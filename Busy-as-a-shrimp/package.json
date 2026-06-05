@@ -1,0 +1,72 @@
+{
+  "name": "ai-resource-platform",
+  "private": true,
+  "version": "0.1.0",
+  "description": "AI resource sharing platform monorepo scaffold",
+  "scripts": {
+    "dev": "corepack pnpm -r --parallel dev",
+    "build": "corepack pnpm -r build",
+    "lint": "corepack pnpm -r lint",
+    "test": "corepack pnpm -r test",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint:web": "corepack pnpm --filter @airp/web lint",
+    "lint:admin": "corepack pnpm --filter @airp/admin lint",
+    "typecheck:web": "corepack pnpm --filter @airp/web typecheck",
+    "typecheck:admin": "corepack pnpm --filter @airp/admin typecheck",
+    "test:web": "corepack pnpm --filter @airp/web test",
+    "test:admin": "corepack pnpm --filter @airp/admin test",
+    "test:http-client": "corepack pnpm --filter @airp/http-client test",
+    "verify:ai-engine": "corepack pnpm --filter @airp/ai-engine lint && corepack pnpm --filter @airp/ai-engine test && corepack pnpm --filter @airp/ai-engine build",
+    "e2e:web": "corepack pnpm --filter @airp/web e2e",
+    "verify:frontend:mvp": "corepack pnpm lint:web && corepack pnpm lint:admin && corepack pnpm typecheck:web && corepack pnpm typecheck:admin && corepack pnpm test:http-client && corepack pnpm test:web && corepack pnpm test:admin && corepack pnpm e2e:web",
+    "infra:up": "docker compose up -d mysql redis rabbitmq elasticsearch",
+    "infra:up:all": "docker compose up -d",
+    "infra:up:ai": "docker compose --profile app up -d ai-engine",
+    "infra:down": "docker compose down",
+    "dev:api": "corepack pnpm --filter @airp/api dev",
+    "dev:web": "corepack pnpm --filter @airp/web dev",
+    "dev:admin": "corepack pnpm --filter @airp/admin dev",
+    "dev:ai": "corepack pnpm --filter @airp/ai-engine dev",
+    "prepare": "husky",
+    "infra:up:prod": "docker compose -f docker-compose.prod.yml up -d --build",
+    "infra:down:prod": "docker compose -f docker-compose.prod.yml down"
+  },
+  "engines": {
+    "node": ">=20.10.0",
+    "pnpm": ">=9.0.0"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx,mjs,cjs,json,md,yml,yaml}": [
+      "prettier --write"
+    ],
+    "*.{ts,tsx,js,jsx,mjs,cjs}": [
+      "eslint --max-warnings=0 --no-warn-ignored"
+    ]
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.23.0",
+    "@prisma/client": "5.22.0",
+    "@typescript-eslint/eslint-plugin": "^8.30.1",
+    "@typescript-eslint/parser": "^8.30.1",
+    "eslint": "^9.23.0",
+    "globals": "^15.15.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.4.3",
+    "prettier": "^3.5.3",
+    "prisma": "5.22.0",
+    "vitest": "^3.1.1",
+    "zod": "4.3.6"
+  },
+  "packageManager": "pnpm@10.33.0+sha512.10568bb4a6afb58c9eb3630da90cc9516417abebd3fabbe6739f0ae795728da1491e9db5a544c76ad8eb7570f5c4bb3d6c637b2cb41bfdcdb47fa823c8649319",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@nestjs/core",
+      "@prisma/client",
+      "@prisma/engines",
+      "esbuild",
+      "msw",
+      "prisma"
+    ]
+  }
+}

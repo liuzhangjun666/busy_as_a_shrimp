@@ -1,0 +1,135 @@
+# ============================================================
+# 龙虾赛博分身 — 每日主工作流（Master Orchestrator）
+# ============================================================
+#
+# 执行流程：
+#   1. 读取用户画像（调用 NestJS API）
+#   2. 根据性格类型选择子工作流
+#   3. 调用 OpenClaw 执行浏览器自动化采集
+#   4. 数据清洗 + 结构化
+#   5. 质量打分 + 去重
+#   6. 推送结果回 NestJS（HTTP 回调 + MQ 双通道）
+#
+# 触发方式：
+#   - NestJS RabbitMQ → Python AI Engine → DeerFlow HTTP API
+#   - 或直接通过 POST /api/chat 触发
+#
+# 性格映射：
+#   - city     → lobster_city_sub.yaml      (同城招聘)
+#   - ecommerce → lobster_ecommerce_sub.yaml (电商选品)
+#   - global   → lobster_global_sub.yaml    (全网机会)
+
+name: lobster_daily_master
+description: "龙虾每日自动扫描主工作流"
+
+inputs:
+  user_id:
+    type: string
+    required: true
+    description: "用户 ID"
+  personality:
+    type: string
+    default: "city"
+    enum: [city, ecommerce, global]
+    description: "分身性格类型"
+  city:
+    type: string
+    default: ""
+    description: "用户所在城市"
+  task_log_id:
+    type: string
+    default: ""
+    description: "NestJS 任务日志 ID"
+
+nodes:
+  # ── Step 1: 获取用户画像 ──
+  - id: fetch_profile
+    type: http_call
+    action: "GET ${NESTJS_BASE_URL}/api/v1/lobster/profile/${user_id}"
+    headers:
+      X-Api-Key: "${DEERFLOW_CALLBACK_TOKEN}"
+    timeout_ms: 10000
+
+  # ── Step 2: 性格路由分发 ──
+  - id: route_personality
+    type: conditional
+    switch_on: "${personality}"
+    cases:
+      city: execute_city_scan
+      ecommerce: execute_ecommerce_scan
+      global: execute_global_scan
+    default: execute_city_scan
+
+  # ── Step 3a: 同城型扫描子工作流 ──
+  - id: execute_city_scan
+    type: sub_workflow
+    ref: lobster_city_sub
+    inputs:
+      user_id: "${user_id}"
+      target_city: "${city || profile.city}"
+    retry: 2
+
+  # ── Step 3b: 电商型扫描子工作流 ──
+  - id: execute_ecommerce_scan
+    type: sub_workflow
+    ref: lobster_ecommerce_sub
+    inputs:
+      user_id: "${user_id}"
+      category: "general"
+    retry: 2
+
+  # ── Step 3c: 全网型扫描子工作流 ──
+  - id: execute_global_scan
+    type: sub_workflow
+    ref: lobster_global_sub
+    inputs:
+      user_id: "${user_id}"
+      keywords: ["实习", "校招", "远程"]
+    retry: 2
+
+  # ── Step 4: 结果质量评估 ──
+  - id: quality_assessment
+    type: llm_eval
+    prompt: |
+      评估以下采集数据质量，过滤低质量条目（score<30）：
+      ${JSON.stringify(scan_results)}
+
+      返回格式：[{score, reason, data}]
+    depends_on: [execute_city_scan, execute_ecommerce_scan, execute_global_scan]
+
+  # ── Step 5: 推送到 NestJS（HTTP + MQ）──
+  - id: push_result
+    type: parallel
+    tasks:
+      - id: http_callback
+        type: http_call
+        action: "POST ${NESTJS_BASE_URL}/api/v1/lobster/push-result"
+        body:
+          userId: "${user_id}"
+          deerflowRunId: "${run_id}"
+          opportunities: "${quality_results}"
+          status: "completed"
+        sign_hmac: true
+
+      - id: mq_push
+        type: mq_publish
+        exchange: "lobster.results"
+        routing_key: "result.push"
+        payload:
+          taskId: "${task_log_id}"
+          runId: "${run_id}"
+          userId: "${user_id}"
+          status: "completed"
+          result:
+            opportunities: "${quality_results}"
+            metrics:
+              durationMs: "${elapsed_ms()}"
+          executedAt: "${iso_timestamp()}"
+
+outputs:
+  status: completed
+  opportunities: "${quality_results}"
+  summary:
+    total_collected: "${scan_results.length}"
+    after_quality_filter: "${quality_results.length}"
+    execution_time_ms: "${elapsed_ms()}"

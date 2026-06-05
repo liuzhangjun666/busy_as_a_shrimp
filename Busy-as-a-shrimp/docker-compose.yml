@@ -1,0 +1,150 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: airp-api
+    env_file:
+      - .env
+    environment:
+      MYSQL_HOST: mysql
+      DATABASE_URL: mysql://root:123456@mysql:3306/busy_as_a_shrimp
+      REDIS_HOST: redis
+      RABBITMQ_HOST: rabbitmq
+      ELASTICSEARCH_NODE: http://elasticsearch:9200
+      OPENCLAW_BASE_URL: http://localhost:18888
+      AI_ENGINE_BASE_URL: http://ai-engine:8088
+      API_PORT: 8081
+    ports:
+      - "8081:8081"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      rabbitmq:
+        condition: service_started
+      elasticsearch:
+        condition: service_started
+    restart: unless-stopped
+
+  web:
+    image: node:20-alpine
+    container_name: airp-web
+    working_dir: /workspace
+    command: sh -c "corepack enable && COREPACK_ENABLE_DOWNLOAD_PROMPT=0 CI=true pnpm install && mkdir -p /workspace/apps/web/.next /workspace/apps/web/.turbo && rm -rf /workspace/apps/web/.next/* /workspace/apps/web/.turbo/* && pnpm --filter @airp/web dev"
+    volumes:
+      - ./:/workspace
+      - web_node_modules:/workspace/node_modules
+      - web_next_cache:/workspace/apps/web/.next
+      - web_turbo_cache:/workspace/apps/web/.turbo
+    env_file:
+      - .env
+    environment:
+      CHOKIDAR_USEPOLLING: "true"
+      WATCHPACK_POLLING: "true"
+      NEXT_TELEMETRY_DISABLED: "1"
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  admin:
+    image: node:20-alpine
+    container_name: airp-admin
+    working_dir: /workspace
+    command: sh -c "corepack enable && COREPACK_ENABLE_DOWNLOAD_PROMPT=0 CI=true pnpm install && pnpm --filter @airp/admin dev"
+    volumes:
+      - ./:/workspace
+      - admin_node_modules:/workspace/node_modules
+    env_file:
+      - .env
+    ports:
+      - "3002:3002"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  ai-engine:
+    image: python:3.11-slim
+    container_name: airp-ai-engine
+    working_dir: /workspace/services/ai-engine-python
+    command: sh -c "pip install --no-cache-dir fastapi uvicorn apscheduler pydantic python-dotenv sqlalchemy pymysql httpx beautifulsoup4 pika aio-pika && python -m app.main"
+    volumes:
+      - ./:/workspace
+    env_file:
+      - .env
+    environment:
+      AI_ENGINE_DATABASE_URL: mysql+pymysql://root:123456@mysql:3306/busy_as_a_shrimp
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: airp
+      RABBITMQ_PASS: airp
+      NESTJS_BASE_URL: http://api:8081
+    ports:
+      - "8088:8088"
+    profiles:
+      - app
+
+  mysql:
+    image: mysql:8.0
+    container_name: airp-mysql
+    restart: unless-stopped
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    environment:
+      MYSQL_ROOT_PASSWORD: 123456
+      MYSQL_DATABASE: busy_as_a_shrimp
+      MYSQL_CHARSET: utf8mb4
+      MYSQL_COLLATION: utf8mb4_unicode_ci
+    volumes:
+      - mysql_data:/var/lib/mysql
+    ports:
+      - "3307:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p123456"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 15s
+
+  redis:
+    image: redis:7
+    container_name: airp-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: airp-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: airp
+      RABBITMQ_DEFAULT_PASS: airp
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+  elasticsearch:
+    image: elasticsearch:8.12.2
+    container_name: airp-es
+    restart: unless-stopped
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    ports:
+      - "9200:9200"
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+
+volumes:
+  mysql_data:
+  es_data:
+  web_node_modules:
+  web_next_cache:
+  web_turbo_cache:
+  admin_node_modules:

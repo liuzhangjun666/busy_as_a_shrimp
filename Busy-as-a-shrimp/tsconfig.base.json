@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "strict": true,
+    "noImplicitAny": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "baseUrl": ".",
+    "paths": {
+      "@airp/database/*": ["packages/database/*"],
+      "@airp/http-client": ["packages/http-client/src/index.ts"],
+      "@airp/api-types": ["packages/api-types/src/index.ts"]
+    }
+  }
+}

@@ -1,0 +1,78 @@
+# ============================================================
+# 同城型分身子工作流（City Personality）
+# ============================================================
+#
+# 目标用户：关注本地就业/校园招聘的大学生
+# 数据源：高校就业网、本地招聘平台、企业校招官网
+# 采集策略：按城市关键词过滤 + 校园专场
+
+name: lobster_city_sub
+description: "同城型分身 — 校园招聘与本地就业扫描"
+
+inputs:
+  user_id:
+    type: string
+    required: true
+  target_city:
+    type: string
+    default: ""
+    description: "目标城市（用于 URL 参数和内容过滤）"
+
+nodes:
+  # ── Step 1: 构建目标站点列表 ──
+  - id: build_target_list
+    type: script
+    code: |
+      city_sites = {
+        "北京": [
+          "https://career.bytedance.com/campus",
+          "https://app.mokahr.com/campus-recruitment/baidu/52529",
+          "https://join.xiaohongshu.com/campus",
+        ],
+        "上海": [
+          "https://careers.tencent.com/",
+          "https://app.mokahr.com/recruitment/meituan/5",
+        ],
+        "_default": [
+          "https://career.bytedance.com/campus",
+          "https://careers.tencent.com/campus",
+          "https://app.mokahr.com/campus",
+        ]
+      }
+      return city_sites.get(target_city, city_sites["_default"])
+
+  # ── Step 2: 调用 OpenClaw 执行浏览器采集 ──
+  - id: browser_scrape
+    type: mcp_tool
+    tool: openclaw.scrape_campus_recruitment
+    params:
+      target_urls: "${build_target_list.result}"
+      city: "${target_city}"
+      max_results: 30
+    timeout_ms: 120000
+
+  # ── Step 3: 数据结构化标准化 ──
+  - id: normalize_data
+    type: transform
+    code: |
+      results = browser_scrape.output
+      normalized = []
+      for item in results:
+        normalized.append({
+          "source_type": "campus_recruitment",
+          "company_name": item.get("company", "未知"),
+          "industry": item.get("industry", ""),
+          "position": item.get("title", ""),
+          "location": item.get("location", target_city or "全国"),
+          "recruitment_type": infer_type(item),
+          "start_date": item.get("date", today_iso()),
+          "announcement_url": item.get("link", ""),
+          "apply_url": item.get("link", ""),
+          "logo_gradient": pick_gradient(),
+          "no_written_test": False,
+        })
+      return normalized
+
+outputs:
+  scan_results: "${normalize_data.output}"
+  sites_visited: "${build_target_list.result.length}"

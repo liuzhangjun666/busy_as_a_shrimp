@@ -1,0 +1,10 @@
+{
+  "strategy": {
+    "profit_threshold_high": 50,
+    "task_num_if_high_profit": 3,
+    "task_num_if_low_profit": 1,
+    "interval_if_high_profit_seconds": 600,
+    "interval_if_low_profit_seconds": 1800
+  },
+  "notes": "对应需求文档中的算力动态调度策略占位配置"
+}

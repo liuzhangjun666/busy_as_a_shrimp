@@ -1,0 +1,136 @@
+﻿{
+  "threadId": "34c5fb9d-6880-40d9-a7a4-d8127854878b",
+  "runId": "019da8bc-ba19-7f13-8ad2-8fada861b08b",
+  "finalStatus": "completed",
+  "trigger": {
+    "success": true,
+    "message": "赛博分身已在后台启动，等待回调结果",
+    "data": {
+      "threadId": "34c5fb9d-6880-40d9-a7a4-d8127854878b",
+      "runId": "019da8bc-ba19-7f13-8ad2-8fada861b08b"
+    }
+  },
+  "lastTaskLogs": [
+    {
+      "logId": "23",
+      "lobsterId": "13",
+      "taskType": "smart_matcher",
+      "personality": "match",
+      "status": "running",
+      "inputJson": {
+        "input": {
+          "messages": [
+            {
+              "role": "user",
+              "content": "请执行技能：lobster-smart-matcher。\n【用户画像】：??????????\n【需求池】：?????,??DeerFlow?????????"
+            }
+          ]
+        },
+        "config": {
+          "metadata": {
+            "userId": "10005",
+            "taskType": "smart_matcher"
+          },
+          "recursion_limit": 100
+        },
+        "webhook": "https://bunch-yelling-tissue.ngrok-free.dev/api/v1/lobster/webhook/callback",
+        "assistant_id": "lead_agent"
+      },
+      "outputJson": null,
+      "deerflowRunId": "019da8bc-ba19-7f13-8ad2-8fada861b08b",
+      "startedAt": "2026-04-20T02:33:53.532Z",
+      "completedAt": null
+    },
+    {
+      "logId": "22",
+      "lobsterId": "13",
+      "taskType": "smart_matcher",
+      "personality": "match",
+      "status": "running",
+      "inputJson": {
+        "input": {
+          "messages": [
+            {
+              "role": "user",
+              "content": "请执行技能：lobster-smart-matcher。\n【用户画像】：????????,???????\n【需求池】：???????????????"
+            }
+          ]
+        },
+        "config": {
+          "metadata": {
+            "userId": "10005",
+            "taskType": "smart_matcher"
+          },
+          "recursion_limit": 100
+        },
+        "webhook": "https://bunch-yelling-tissue.ngrok-free.dev/api/v1/lobster/webhook/callback",
+        "assistant_id": "lead_agent"
+      },
+      "outputJson": null,
+      "deerflowRunId": "019da8ba-4ee0-7c40-b870-58db7dadeba4",
+      "startedAt": "2026-04-20T02:31:14.996Z",
+      "completedAt": null
+    },
+    {
+      "logId": "21",
+      "lobsterId": "13",
+      "taskType": "smart_matcher",
+      "personality": "match",
+      "status": "running",
+      "inputJson": {
+        "input": {
+          "messages": [
+            {
+              "role": "user",
+              "content": "请执行技能：lobster-smart-matcher。\n【用户画像】：上海本地生活达人，擅长探店短视频\n【需求池】：餐饮品牌探店合作、本地货源对接"
+            }
+          ]
+        },
+        "config": {
+          "metadata": {
+            "userId": "10005",
+            "taskType": "smart_matcher"
+          },
+          "recursion_limit": 100
+        },
+        "webhook": "https://bunch-yelling-tissue.ngrok-free.dev/api/v1/lobster/webhook/callback",
+        "assistant_id": "lead_agent"
+      },
+      "outputJson": null,
+      "deerflowRunId": "019da8ba-1824-7a70-b42c-81d5234e9488",
+      "startedAt": "2026-04-20T02:31:00.990Z",
+      "completedAt": null
+    },
+    {
+      "logId": "6",
+      "lobsterId": "13",
+      "taskType": "smart_matcher",
+      "personality": "match",
+      "status": "running",
+      "inputJson": {
+        "input": {
+          "messages": [
+            {
+              "role": "user",
+              "content": "请执行技能：lobster-smart-matcher。\n【用户画像】：city\n【需求池】：daily_scan"
+            }
+          ]
+        },
+        "config": {
+          "metadata": {
+            "userId": "10005",
+            "taskType": "smart_matcher"
+          },
+          "recursion_limit": 100
+        },
+        "webhook": "https://bunch-yelling-tissue.ngrok-free.dev/api/v1/lobster/webhook/callback",
+        "assistant_id": "lead_agent"
+      },
+      "outputJson": null,
+      "deerflowRunId": "019d8b3b-4ceb-78a1-9643-66419abf0090",
+      "startedAt": "2026-04-14T09:03:29.493Z",
+      "completedAt": null
+    }
+  ],
+  "time": "2026-04-20T10:34:13"
+}

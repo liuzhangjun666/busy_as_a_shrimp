@@ -1,0 +1,26 @@
+{
+  "name": "@airp/database",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "build": "node ./scripts/prisma-generate-safe.cjs",
+    "generate": "node ./scripts/prisma-generate-safe.cjs",
+    "validate": "prisma validate",
+    "migrate:status": "prisma migrate status",
+    "migrate:deploy": "prisma migrate deploy",
+    "migrate:resolve:init": "prisma migrate resolve --applied 20260328161000_init",
+    "db:push": "prisma db push",
+    "seed": "corepack pnpm dlx tsx prisma/seed.ts",
+    "lint": "prisma validate",
+    "test": "prisma validate"
+  },
+  "prisma": {
+    "seed": "corepack pnpm dlx tsx prisma/seed.ts"
+  },
+  "devDependencies": {
+    "prisma": "^5.22.0"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.22.0"
+  }
+}

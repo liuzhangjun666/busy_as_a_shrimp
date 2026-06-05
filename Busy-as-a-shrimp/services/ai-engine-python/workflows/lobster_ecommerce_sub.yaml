@@ -1,0 +1,82 @@
+# ============================================================
+# 电商型分身子工作流（Ecommerce Personality）
+# ============================================================
+#
+# 目标用户：关注电商货源/选品/分销机会
+# 数据源：1688、拼多多、淘宝联盟
+# 采集策略：按分类搜索 + 价格趋势分析
+
+name: lobster_ecommerce_sub
+description: "电商型分身 — 1688/拼多多商品信息扫描"
+
+inputs:
+  user_id:
+    type: string
+    required: true
+  category:
+    type: string
+    default: "general"
+    description: "商品分类（electronics/clothing/home/food/beauty）"
+  max_products:
+    type: integer
+    default: 20
+
+nodes:
+  # ── Step 1: 构建 1688 搜索 URL 列表 ──
+  - id: build_1688_urls
+    type: script
+    code: |
+      base = "https://s.1688.com/selloffer/offer_search.htm"
+      keywords_map = {
+        "electronics": ["蓝牙耳机", "数据线", "手机壳"],
+        "clothing": ["T恤", "卫衣", "牛仔裤"],
+        "home": ["收纳盒", "台灯", "地毯"],
+        "food": ["零食大礼包", "坚果", "咖啡"],
+        "beauty": ["面膜", "防晒霜", "洗面奶"],
+        "general": ["热销", "爆款", "新款"],
+      }
+      keywords = keywords_map.get(category, keywords_map["general"])
+      urls = [f"{base}?keywords={kw}" for kw in keywords]
+      return urls
+
+  # ── Step 2: OpenClaw 采集 1688 商品 ──
+  - id: scrape_1688
+    type: mcp_tool
+    tool: openclaw.scrape_ecommerce_products
+    params:
+      platform: "1688"
+      category: "${category}"
+      target_urls: "${build_1688_urls.result}"
+      max_results: "${max_products}"
+    timeout_ms: 120000
+
+  # ── Step 3: 价格区间标准化 ──
+  - id: normalize_prices
+    type: transform
+    code: |
+      products = scrape_1688.output
+      normalized = []
+      for p in products:
+          price_str = p.get("price", "0")
+          try:
+              price_val = float(re.sub(r'[^\d.]', '', price_str))
+          except:
+              price_val = 0.0
+          
+          normalized.append({
+            "source_type": "ecommerce_1688",
+            "title": p.get("name", ""),
+            "company_name": p.get("supplier", ""),
+            "industry": "电商",
+            "position": f"商品 | {category}",
+            "location": p.get("origin", "全国"),
+            "price_range": {"min": price_val * 0.9, "max": price_val * 1.1},
+            "commission": round(price_val * 0.15, 2),
+            "source_url": p.get("url", ""),
+            "logo_gradient": "from-orange-500 to-red-500",
+          })
+      return normalized
+
+outputs:
+  scan_results: "${normalize_prices.output}"
+  products_analyzed: "${scrape_1688.output.length}"

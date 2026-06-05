@@ -1,0 +1,23 @@
+[project]
+name = "airp-ai-engine"
+version = "0.1.0"
+description = "灏忛緳铏続I寮曟搸鍒濆楠ㄦ灦"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.115.0",
+  "uvicorn>=0.31.0",
+  "apscheduler>=3.10.4",
+  "pydantic>=2.9.2",
+  "python-dotenv>=1.0.1",
+  "sqlalchemy>=2.0.0",
+  "pymysql>=1.1.0",
+  "httpx>=0.27.0",
+  "beautifulsoup4>=4.12.3",
+  "pika>=1.3.0",
+  "aio-pika>=9.0.0",
+]
+
+[tool.uvicorn]
+host = "0.0.0.0"
+port = 8088
+

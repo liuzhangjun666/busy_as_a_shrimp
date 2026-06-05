@@ -1,0 +1,706 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  userId              BigInt               @id @default(autoincrement()) @map("user_id")
+  phoneHash           String               @map("phone_hash") @db.VarChar(64)
+  phoneEncrypted      String?              @map("phone_encrypted") @db.LongText
+  passwordHash        String?              @map("password_hash") @db.VarChar(255)
+  role                UserRole
+  city                String?              @db.VarChar(50)
+  district            String?              @db.VarChar(100)
+  memberLevel         MemberLevel          @default(free) @map("member_level")
+  memberExpire        DateTime?            @map("member_expire")
+  status              UserStatus           @default(active)
+  createdAt           DateTime             @default(now()) @map("created_at")
+  captainLevel        CaptainLevel         @default(normal) @map("captain_level")
+  maskedPhone         String?              @map("masked_phone") @db.VarChar(20)
+  nickname            String?              @db.VarChar(50)
+  inviteCode          String?              @unique @map("invite_code") @db.VarChar(10)
+  lastIp              String?              @map("last_ip") @db.VarChar(50)
+  taskAcceptCount     Int                  @default(0) @map("task_accept_count")
+  taskViewCount       Int                  @default(0) @map("task_view_count")
+  avatar              String?              @db.LongText
+  realNameVerified    Boolean              @default(false) @map("real_name_verified")
+  realNameVerifiedAt  DateTime?            @map("real_name_verified_at")
+  speakMutedUntil     DateTime?            @map("speak_muted_until")
+  brushOrderPenalties BrushOrderPenalty[]
+  contents            Content[]
+  doppelganger        CyberDoppelganger?
+  lobsterMatchRecords LobsterMatchRecord[]
+  reviewTasks         ReviewTask[]
+  lobster             LobsterStatus?
+  resources           Resource[]
+  riskEvents          RiskControlEvent[]
+  devices             UserDevice[]
+  purchases           UserPurchase[]
+  publishedBounties   BountyTask[]          @relation("PublishedBounties")
+  taskSubmissions     TaskSubmission[]      @relation("TaskSubmissionUser")
+  violationEvents     ViolationEvent[]
+
+  @@map("users")
+}
+
+model Resource {
+  resourceId         BigInt         @id @default(autoincrement()) @map("resource_id")
+  userId             BigInt         @map("user_id")
+  resourceType       ResourceType   @map("resource_type")
+  tags               Json
+  areaCode           String?        @map("area_code") @db.VarChar(20)
+  priceRange         Json?          @map("price_range")
+  activationDetails  Json?          @map("activation_details")
+  status             ResourceStatus @default(pending)
+  verifiedAt         DateTime?      @map("verified_at")
+  lastUpdate         DateTime?      @map("last_update")
+  resourceTypes      Json?          @map("resource_types")
+  reviewReason       String?        @map("review_reason") @db.VarChar(255)
+  reviewEngine       String?        @map("review_engine") @db.VarChar(64)
+  matches            Match[]
+  user               User           @relation(fields: [userId], references: [userId])
+
+  @@index([userId], map: "resources_user_id_fkey")
+  @@map("resources")
+}
+
+model Match {
+  matchId    BigInt      @id @default(autoincrement()) @map("match_id")
+  needId     BigInt      @map("need_id")
+  resourceId BigInt      @map("resource_id")
+  matchScore Decimal     @map("match_score") @db.Decimal(5, 2)
+  status     MatchStatus
+  pushTime   DateTime?   @map("push_time")
+  feedback   Int?        @db.TinyInt
+  resource   Resource    @relation(fields: [resourceId], references: [resourceId])
+
+  @@index([resourceId], map: "matches_resource_id_fkey")
+  @@index([needId], map: "need_id")
+  @@map("matches")
+}
+
+model CaptainCommission {
+  commissionId     BigInt                        @id @default(autoincrement()) @map("commission_id")
+  captainId        BigInt                        @map("captain_id")
+  orderId          BigInt                        @map("order_id")
+  orderAmount      Decimal                       @map("order_amount") @db.Decimal(10, 2)
+  commissionRate   Decimal                       @map("commission_rate") @db.Decimal(5, 2)
+  commissionAmount Decimal                       @map("commission_amount") @db.Decimal(10, 2)
+  status           CommissionStatus
+  confirmAt        DateTime?                     @map("confirm_at")
+  penaltySnapshots BrushOrderPenaltyCommission[]
+
+  @@index([captainId], map: "idx_commission_captain_id")
+  @@index([orderId], map: "order_id")
+  @@map("captain_commissions")
+}
+
+model InviteRecord {
+  recordId          BigInt             @id @default(autoincrement()) @map("record_id")
+  inviterId         BigInt             @map("inviter_id")
+  inviteeId         BigInt             @map("invitee_id")
+  inviteCode        String             @map("invite_code") @db.VarChar(8)
+  isValid           Boolean            @default(true) @map("is_valid")
+  createdAt         DateTime           @default(now()) @map("created_at")
+  brushOrderPenalty BrushOrderPenalty?
+
+  @@index([inviteeId], map: "invitee_id")
+  @@index([inviterId], map: "inviter_id")
+  @@unique([inviteeId], map: "uk_invite_records_invitee")
+  @@map("invite_records")
+}
+
+model BrushOrderPenalty {
+  penaltyId           BigInt                        @id @default(autoincrement()) @map("penalty_id")
+  userId              BigInt                        @map("user_id")
+  inviteRecordId      BigInt                        @unique @map("invite_record_id")
+  triggerReasons      Json                          @map("trigger_reasons")
+  beforeCaptainLevel  CaptainLevel                  @map("before_captain_level")
+  status              BrushOrderPenaltyStatus       @default(applied)
+  reviewedBy          BigInt?                       @map("reviewed_by")
+  reviewNote          String?                       @map("review_note") @db.VarChar(255)
+  appliedAt           DateTime                      @default(now()) @map("applied_at")
+  reviewedAt          DateTime?                     @map("reviewed_at")
+  rolledBackAt        DateTime?                     @map("rolled_back_at")
+  inviteRecord        InviteRecord                  @relation(fields: [inviteRecordId], references: [recordId])
+  user                User                          @relation(fields: [userId], references: [userId])
+  commissionSnapshots BrushOrderPenaltyCommission[]
+
+  @@index([userId, status], map: "idx_penalty_user_status")
+  @@index([appliedAt], map: "idx_penalty_applied")
+  @@map("brush_order_penalties")
+}
+
+model BrushOrderPenaltyCommission {
+  id           BigInt            @id @default(autoincrement()) @map("id")
+  penaltyId    BigInt            @map("penalty_id")
+  commissionId BigInt            @map("commission_id")
+  beforeStatus CommissionStatus  @map("before_status")
+  beforeAmount Decimal           @map("before_amount") @db.Decimal(10, 2)
+  commission   CaptainCommission @relation(fields: [commissionId], references: [commissionId])
+  penalty      BrushOrderPenalty @relation(fields: [penaltyId], references: [penaltyId])
+
+  @@unique([penaltyId, commissionId], map: "uk_penalty_commission")
+  @@index([commissionId], map: "idx_penalty_commission_id")
+  @@map("brush_order_penalty_commissions")
+}
+
+model UserDevice {
+  deviceId          BigInt   @id @default(autoincrement()) @map("device_id")
+  userId            BigInt   @map("user_id")
+  registerIp        String   @map("register_ip") @db.VarChar(50)
+  deviceFingerprint String?  @map("device_fingerprint")
+  createdAt         DateTime @default(now()) @map("created_at")
+  user              User     @relation(fields: [userId], references: [userId])
+
+  @@index([userId], map: "idx_user_devices_user")
+  @@index([registerIp], map: "idx_user_devices_ip")
+  @@index([deviceFingerprint], map: "idx_user_devices_fingerprint")
+  @@map("user_devices")
+}
+
+model RiskControlEvent {
+  eventId   BigInt        @id @default(autoincrement()) @map("event_id")
+  userId    BigInt?       @map("user_id")
+  eventType RiskEventType @map("event_type")
+  action    RiskAction
+  detail    Json?
+  createdAt DateTime      @default(now()) @map("created_at")
+  user      User?         @relation(fields: [userId], references: [userId])
+
+  @@index([userId], map: "idx_risk_user")
+  @@index([eventType, createdAt], map: "idx_risk_type_created")
+  @@map("risk_control_events")
+}
+
+model ViolationEvent {
+  eventId   BigInt            @id @default(autoincrement()) @map("event_id")
+  userId    BigInt            @map("user_id")
+  scene     String            @db.VarChar(50)
+  reason    String            @db.VarChar(255)
+  decision  ViolationDecision
+  createdAt DateTime          @default(now()) @map("created_at")
+  user      User              @relation(fields: [userId], references: [userId])
+
+  @@index([userId, createdAt], map: "idx_violation_user_created")
+  @@map("violation_events")
+}
+
+model Content {
+  contentId      BigInt        @id @default(autoincrement()) @map("content_id")
+  userId         BigInt        @map("user_id")
+  contentType    ContentType   @map("content_type")
+  contentBody    String        @map("content_body") @db.Text
+  targetPlatform String        @map("target_platform") @db.VarChar(50)
+  status         ContentStatus @default(draft)
+  stats          Json?
+  publishedAt    DateTime?     @map("published_at")
+  user           User          @relation(fields: [userId], references: [userId])
+
+  @@index([userId], map: "contents_user_id_fkey")
+  @@map("contents")
+}
+
+model Announcement {
+  noticeId  BigInt   @id @default(autoincrement()) @map("notice_id")
+  content   String   @db.Text
+  publisher String   @default("admin") @db.VarChar(50)
+  createdAt DateTime @default(now()) @map("created_at")
+  title     String   @default("system notice") @db.VarChar(100)
+  type      String   @default("notice") @db.VarChar(20)
+
+  @@map("announcements")
+}
+
+model AiBrief {
+  aiBriefId       BigInt   @id @default(autoincrement()) @map("ai_brief_id")
+  externalId      String   @unique @map("external_id") @db.VarChar(128)
+  sourceName      String   @map("source_name") @db.VarChar(120)
+  title           String   @db.VarChar(300)
+  titleZh         String?  @map("title_zh") @db.VarChar(300)
+  summary         String?  @db.Text
+  summaryZh       String?  @map("summary_zh") @db.Text
+  translateStatus String   @default("pending") @map("translate_status") @db.VarChar(20)
+  translatedAt    DateTime? @map("translated_at")
+  sourceUrl       String   @map("source_url") @db.VarChar(500)
+  publishedAt     DateTime @map("published_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@index([publishedAt(sort: Desc), aiBriefId(sort: Desc)], map: "idx_ai_briefs_published_id")
+  @@index([translateStatus], map: "idx_ai_briefs_translate_status")
+  @@map("ai_briefs")
+}
+
+model SoloSignal {
+  soloSignalId   BigInt   @id @default(autoincrement()) @map("solo_signal_id")
+  externalId     String   @unique @map("external_id") @db.VarChar(128)
+  sourceName     String   @map("source_name") @db.VarChar(120)
+  title          String   @db.VarChar(300)
+  summary        String?  @db.Text
+  sourceUrl      String   @map("source_url") @db.VarChar(500)
+  publishedAt    DateTime @map("published_at")
+  incomeSnippet  String?  @map("income_snippet") @db.VarChar(500)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@index([publishedAt(sort: Desc), soloSignalId(sort: Desc)], map: "idx_solo_signals_published_id")
+  @@map("solo_signals")
+}
+
+model StartupPost {
+  startupPostId BigInt            @id @default(autoincrement()) @map("startup_post_id")
+  title         String            @db.VarChar(160)
+  summary       String?           @db.VarChar(500)
+  content       String            @db.Text
+  category      String?           @db.VarChar(60)
+  tags          Json?
+  coverImageUrl String?           @map("cover_image_url") @db.VarChar(500)
+  contactInfo   String?           @map("contact_info") @db.VarChar(255)
+  sourceUrl     String?           @map("source_url") @db.VarChar(500)
+  status        StartupPostStatus @default(draft)
+  sort          Int               @default(0)
+  viewCount     Int               @default(0) @map("view_count")
+  publishedAt   DateTime?         @map("published_at")
+  createdBy     String            @default("admin") @map("created_by") @db.VarChar(50)
+  updatedBy     String            @default("admin") @map("updated_by") @db.VarChar(50)
+  createdAt     DateTime          @default(now()) @map("created_at")
+  updatedAt     DateTime          @updatedAt @map("updated_at")
+  @@index([status, publishedAt], map: "idx_startup_posts_status_published_at")
+  @@index([category], map: "idx_startup_posts_category")
+  @@index([createdAt], map: "idx_startup_posts_created_at")
+  @@map("startup_posts")
+}
+
+model DictType {
+  dictId    BigInt     @id @default(autoincrement()) @map("dict_id")
+  dictName  String     @map("dict_name") @db.VarChar(100)
+  dictType  String     @unique @map("dict_type") @db.VarChar(100)
+  status    DictStatus @default(normal)
+  remark    String?    @db.VarChar(255)
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
+  dataItems DictData[]
+
+  @@map("dict_types")
+}
+
+model DictData {
+  dictDataId BigInt     @id @default(autoincrement()) @map("dict_data_id")
+  dictType   String     @map("dict_type") @db.VarChar(100)
+  dictCode   String     @map("dict_code") @db.VarChar(100)
+  dictLabel  String     @map("dict_label") @db.VarChar(100)
+  dictValue  String     @map("dict_value") @db.VarChar(100)
+  dictSort   Int        @default(0) @map("dict_sort")
+  status     DictStatus @default(normal)
+  remark     String?    @db.VarChar(255)
+  createdAt  DateTime   @default(now()) @map("created_at")
+  updatedAt  DateTime   @updatedAt @map("updated_at")
+  type       DictType   @relation(fields: [dictType], references: [dictType])
+
+  @@unique([dictType, dictCode], map: "uk_dict_data_type_code")
+  @@index([dictType, status, dictSort], map: "idx_dict_data_type_status_sort")
+  @@map("dict_data")
+}
+
+model CyberDoppelganger {
+  doppelgangerId BigInt             @id @default(autoincrement()) @map("doppelganger_id")
+  userId         BigInt             @unique @map("user_id")
+  balance        Decimal            @default(0.00) @db.Decimal(10, 2)
+  status         DoppelgangerStatus @default(inactive)
+  createdAt      DateTime           @default(now()) @map("created_at")
+  updatedAt      DateTime           @updatedAt @map("updated_at")
+  user           User               @relation(fields: [userId], references: [userId])
+  transactions   PointTransaction[]
+
+  @@map("cyber_doppelgangers")
+}
+
+model ActivityPeriod {
+  periodId    BigInt   @id @default(autoincrement()) @map("period_id")
+  startTime   DateTime @map("start_time")
+  endTime     DateTime @map("end_time")
+  rewardPool  Decimal  @default(5000.00) @map("reward_pool") @db.Decimal(10, 2)
+  isProcessed Boolean  @default(false) @map("is_processed")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([startTime, endTime])
+  @@map("activity_periods")
+}
+
+model PointTransaction {
+  transactionId  BigInt            @id @default(autoincrement()) @map("transaction_id")
+  doppelgangerId BigInt            @map("doppelganger_id")
+  amount         Decimal           @db.Decimal(10, 2)
+  type           PointTransType
+  metadata       Json?
+  createdAt      DateTime          @default(now()) @map("created_at")
+  doppelganger   CyberDoppelganger @relation(fields: [doppelgangerId], references: [doppelgangerId])
+
+  @@index([doppelgangerId])
+  @@map("point_transactions")
+}
+
+model SignInRecord {
+  recordId       BigInt   @id @default(autoincrement()) @map("record_id")
+  userId         BigInt   @map("user_id")
+  lastSignInDate DateTime @map("last_sign_in_date")
+  streakDays     Int      @default(1) @map("streak_days")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@unique([userId, lastSignInDate])
+  @@map("sign_in_records")
+}
+
+model BountyTask {
+  taskId                BigInt           @id @default(autoincrement()) @map("task_id")
+  publisherId           BigInt?          @map("publisher_id")
+  title                 String           @db.VarChar(100)
+  content               String           @db.Text
+  points                Decimal          @db.Decimal(10, 2)
+  status                TaskStatus       @default(PUBLISHED)
+  createdAt             DateTime         @default(now()) @map("created_at")
+  updatedAt             DateTime         @updatedAt @map("updated_at")
+  difficulty            TaskDifficulty   @default(MEDIUM)
+  selectedSubmissionId  BigInt?          @map("selected_submission_id")
+  finishedAt            DateTime?        @map("finished_at")
+  cancelledAt           DateTime?        @map("cancelled_at")
+  publisher             User?            @relation("PublishedBounties", fields: [publisherId], references: [userId])
+  submissions           TaskSubmission[]
+
+  @@index([publisherId])
+  @@map("bounty_tasks")
+}
+
+model TaskSubmission {
+  submissionId       BigInt           @id @default(autoincrement()) @map("submission_id")
+  userId             BigInt           @map("user_id")
+  taskId             BigInt           @map("task_id")
+  proof              String?          @db.Text
+  status             SubmissionStatus @default(PENDING)
+  createdAt          DateTime         @default(now()) @map("created_at")
+  updatedAt          DateTime         @updatedAt @map("updated_at")
+  publisherAgreedAt  DateTime?        @map("publisher_agreed_at")
+  claimerAgreedAt    DateTime?        @map("claimer_agreed_at")
+  contactUnlockedAt  DateTime?        @map("contact_unlocked_at")
+  rewardGrantedAt    DateTime?        @map("reward_granted_at")
+  task               BountyTask       @relation(fields: [taskId], references: [taskId])
+  user               User             @relation("TaskSubmissionUser", fields: [userId], references: [userId])
+
+  @@index([taskId])
+  @@index([userId])
+  @@map("task_submissions")
+}
+
+model LobsterStatus {
+  lobsterId           BigInt            @id @default(autoincrement()) @map("lobster_id")
+  userId              BigInt            @unique @map("user_id")
+  hp                  Int               @default(100) @map("hp")
+  personality         String?           @map("personality") @db.VarChar(20)
+  personalityUnlocked Boolean           @default(false) @map("personality_unlocked")
+  lobsterExpiresAt    DateTime?         @map("lobster_expires_at")
+  lastExecutedAt      DateTime?         @map("last_executed_at")
+  status              LobsterStatusEnum @default(sleeping)
+  createdAt           DateTime          @default(now()) @map("created_at")
+  updatedAt           DateTime          @updatedAt @map("updated_at")
+  hpLogs              HpLog[]
+  user                User              @relation(fields: [userId], references: [userId])
+  taskLogs            LobsterTaskLog[]
+
+  @@map("lobster_statuses")
+}
+
+model LobsterTaskLog {
+  logId         BigInt        @id @default(autoincrement()) @map("log_id")
+  lobsterId     BigInt        @map("lobster_id")
+  taskType      String        @map("task_type") @db.VarChar(50)
+  personality   String        @map("personality") @db.VarChar(20)
+  status        String        @db.VarChar(20)
+  inputJson     Json?         @map("input_json")
+  outputJson    Json?         @map("output_json")
+  deerflowRunId String?       @map("deerflow_run_id") @db.VarChar(100)
+  startedAt     DateTime      @map("started_at")
+  completedAt   DateTime?     @map("completed_at")
+  lobster       LobsterStatus @relation(fields: [lobsterId], references: [lobsterId])
+
+  @@index([lobsterId, startedAt])
+  @@map("lobster_task_logs")
+}
+
+model HpLog {
+  logId     BigInt        @id @default(autoincrement()) @map("log_id")
+  lobsterId BigInt        @map("lobster_id")
+  delta     Int
+  reason    String        @db.VarChar(50)
+  refId     BigInt?       @map("ref_id")
+  createdAt DateTime      @default(now()) @map("created_at")
+  lobster   LobsterStatus @relation(fields: [lobsterId], references: [lobsterId])
+
+  @@index([lobsterId, createdAt])
+  @@map("hp_logs")
+}
+
+model Opportunity {
+  opportunityId   BigInt   @id @default(autoincrement()) @map("opportunity_id")
+  userId          BigInt   @map("user_id")
+  companyName     String   @map("company_name") @db.VarChar(120)
+  industry        String   @db.VarChar(60)
+  logoGradient    String   @map("logo_gradient") @db.VarChar(100)
+  recruitmentType String   @map("recruitment_type") @db.VarChar(60)
+  location        String   @db.VarChar(60)
+  startDate       String   @map("start_date") @db.VarChar(20)
+  endDate         String   @map("end_date") @db.VarChar(20)
+  noWrittenTest   Boolean  @default(false) @map("no_written_test")
+  position        String   @db.VarChar(120)
+  announcementUrl String   @map("announcement_url") @db.VarChar(500)
+  applyUrl        String   @map("apply_url") @db.VarChar(500)
+  sourceType      String   @map("source_type") @db.VarChar(30)
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@index([userId, sourceType], map: "idx_opportunities_user_source")
+  @@index([createdAt(sort: Desc)], map: "idx_opportunities_created_at")
+  @@map("opportunities")
+}
+
+model ReviewTask {
+  reviewId  BigInt       @id @default(autoincrement()) @map("review_id")
+  userId    BigInt       @map("user_id")
+  taskLogId BigInt?      @map("task_log_id")
+  context   Json?
+  status    ReviewStatus @default(pending)
+  expiresAt DateTime     @map("expires_at")
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @updatedAt @map("updated_at")
+  user      User         @relation(fields: [userId], references: [userId])
+
+  @@index([userId, status])
+  @@map("lobster_review_tasks")
+}
+
+model LobsterMatchRecord {
+  matchId      BigInt   @id @default(autoincrement()) @map("match_id")
+  userId       BigInt   @map("user_id")
+  targetUserId BigInt?  @map("target_user_id")
+  title        String   @db.VarChar(200)
+  content      String?  @db.Text
+  matchScore   Decimal? @map("match_score") @db.Decimal(5, 2)
+  metadata     Json?
+  createdAt    DateTime @default(now()) @map("created_at")
+  user         User     @relation(fields: [userId], references: [userId])
+
+  @@index([userId])
+  @@map("lobster_match_records")
+}
+
+model UserPurchase {
+  purchaseId BigInt   @id @default(autoincrement()) @map("purchase_id")
+  userId     BigInt   @map("user_id")
+  itemType   String   @map("item_type") @db.VarChar(50)
+  amount     Decimal  @db.Decimal(10, 2)
+  status     String   @default("completed") @db.VarChar(20)
+  sourceModule String? @map("source_module") @db.VarChar(32)
+  sourceAction String? @map("source_action") @db.VarChar(64)
+  createdAt  DateTime @default(now()) @map("created_at")
+  user       User     @relation(fields: [userId], references: [userId])
+
+  @@index([userId])
+  @@map("user_purchases")
+}
+
+enum UserRole {
+  service
+  resource
+  both
+}
+
+enum MemberLevel {
+  free
+  monthly
+  yearly
+  lifetime
+}
+
+enum UserStatus {
+  active
+  banned
+  frozen
+}
+
+enum ResourceType {
+  skill
+  location
+  account
+  time
+}
+
+enum ResourceStatus {
+  pending
+  active
+  inactive
+  rejected
+}
+
+enum MatchStatus {
+  pushed
+  viewed
+  confirmed
+  done
+  invalid
+}
+
+enum CommissionStatus {
+  pending
+  active
+  paid
+  invalid
+}
+
+enum ContentType {
+  card
+  post
+  video_script
+  poster
+}
+
+enum ContentStatus {
+  draft
+  pending
+  published
+  rejected
+}
+
+enum RiskEventType {
+  same_ip_limit
+  abnormal_device
+  invite_chain_detection
+  brush_order_disposal
+  violation_penalty
+  account_unban
+}
+
+enum RiskAction {
+  pass
+  review
+  block
+  disposed
+}
+
+enum ViolationDecision {
+  warning
+  mute
+  ban
+  unban
+}
+
+enum BrushOrderPenaltyStatus {
+  applied
+  confirmed
+  rolled_back
+}
+
+enum CaptainLevel {
+  normal
+  advanced
+  gold
+}
+
+enum DictStatus {
+  normal
+  disabled
+}
+
+enum StartupPostStatus {
+  draft
+  published
+  offline
+}
+
+enum DoppelgangerStatus {
+  active
+  inactive
+  frozen
+}
+
+enum PointTransType {
+  INVITE_REWARD
+  TASK_REWARD
+  TOKEN_CONSUME
+  SYSTEM_ADJUST
+  INITIAL_BONUS
+  DAILY_SIGN_IN
+  CONTRIBUTION_REWARD
+}
+
+enum TaskStatus {
+  PUBLISHED
+  FINISHED
+  CANCELLED
+}
+
+enum TaskDifficulty {
+  EASY
+  MEDIUM
+  HARD
+  EXPERT
+}
+
+enum SubmissionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum LobsterStatusEnum {
+  sleeping
+  active
+  executing
+  paused
+}
+
+enum ReviewStatus {
+  pending
+  approved
+  rejected
+  expired
+}
+
+enum ConversationType {
+  C2C
+  SYSTEM
+}
+
+model Conversation {
+  conversationId BigInt           @id @default(autoincrement()) @map("conversation_id")
+  type           ConversationType @default(C2C)
+  participantA   BigInt           @map("participant_a")
+  participantB   BigInt           @map("participant_b")
+  lastMessage    String?          @db.Text @map("last_message")
+  lastMessageAt  DateTime?        @map("last_message_at")
+  createdAt      DateTime         @default(now()) @map("created_at")
+  updatedAt      DateTime         @updatedAt @map("updated_at")
+
+  messages       Message[]
+
+  @@unique([participantA, participantB], map: "uk_conversations_participants")
+  @@index([lastMessageAt(sort: Desc)], map: "idx_conversations_last_msg")
+  @@map("conversations")
+}
+
+model Message {
+  messageId      BigInt       @id @default(autoincrement()) @map("message_id")
+  conversationId BigInt       @map("conversation_id")
+  senderId       BigInt       @map("sender_id")
+  content        String       @db.Text
+  msgType        String       @default("text") @db.VarChar(20) @map("msg_type")
+  isRead         Boolean      @default(false) @map("is_read")
+  createdAt      DateTime     @default(now()) @map("created_at")
+
+  conversation   Conversation @relation(fields: [conversationId], references: [conversationId], onDelete: Cascade)
+
+  @@index([conversationId, createdAt(sort: Asc)], map: "idx_messages_conversation_created")
+  @@map("messages")
+}

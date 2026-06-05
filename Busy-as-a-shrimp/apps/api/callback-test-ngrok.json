@@ -1,0 +1,7 @@
+{
+  "run_id": "run_local_ngrok_001",
+  "thread_id": "thread_local_ngrok_001",
+  "status": "success",
+  "metadata": { "userId": "1", "taskType": "smart_matcher", "taskLogId": "1" },
+  "values": { "ok": true }
+}

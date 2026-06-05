@@ -1,0 +1,122 @@
+# ============================================================
+# 全网型子工作流 (Global Personality)
+# ============================================================
+#
+# 目标用户：需要全网范围信息的用户（自媒体、内容创作者、广泛求职）
+# 数据来源：
+#   合并 city + ecommerce 的所有来源，加上：
+#   - 社交媒体热点（小红书/抖音/B站）
+#   - 综合招聘平台（Boss直聘/猎聘/拉勾）
+#   - 行业资讯网站（36kr/虎嗅）
+#
+# 特色能力：跨平台去重、热度排序、多维度筛选
+
+name: lobster_global_sub
+description: "全网型分身 — 多平台聚合搜索与智能排序"
+
+agents:
+  global_aggregator:
+    role: "全网聚合器"
+    goal: >
+      并行调用多个数据源，执行跨平台去重和智能排序，
+      返回全局最优结果集。
+
+  relevance_ranker:
+    role: "相关性排序引擎"
+    goal: >
+      结合用户画像标签、历史偏好和行为数据，
+      对聚合结果做个性化相关性打分和排序。
+
+tools:
+  - name: parallel_city_scan
+    type: sub_workflow
+    workflow: lobster_city_sub
+
+  - name: parallel_ecommerce_scan
+    type: sub_workflow
+    workflow: lobster_ecommerce_sub
+
+  - name: social_media_scan
+    type: mcp
+    server: openclaw
+    method: scrape_social_trending
+
+  - name: cross_platform_dedup
+    type: python_function
+    module: app.aggregator.deduplicator
+    function: deduplicate_and_merge
+
+  - name: relevance_score
+    type: python_function
+    module: app.aggregator.ranker
+    function: rank_by_relevance
+
+workflow_steps:
+  # Step 1: 并行执行所有子工作流
+  - id: gl_01_parallel_exec
+    agent: global_aggregator
+    action: parallel_execute
+    tasks:
+      - name: city_results
+        action: run_sub_workflow
+        workflow: lobster_city_sub
+        params:
+          userId: "${input.userId}"
+          city: "${input.city}"
+          max_results: 25
+
+      - name: ecommerce_results
+        action: run_sub_workflow
+        workflow: lobster_ecommerce_sub
+        params:
+          userId: "${input.userId}"
+          city: "${input.city}"
+          max_results: 20
+
+      - name: social_results
+        action: call_tool
+        tool: social_media_scan
+        params:
+          keywords: "${user_profile.tags[:3]}"
+          max_results: 15
+    output_var: all_source_results
+
+  # Step 2: 跨平台去重合并
+  - id: gl_02_dedup_merge
+    agent: global_aggregator
+    action: call_tool
+    tool: cross_platform_dedup
+    params:
+      sources: "${all_source_results}"
+      dedup_fields: [title, company_name, position]
+      merge_strategy: keep_highest_quality
+    output_var: merged_results
+
+  # Step 3: 个性化相关性排序
+  - id: gl_03_ranking
+    agent: relevance_ranker
+    action: call_tool
+    tool: relevance_score
+    params:
+      items: "${merged_results}"
+      user_tags: "${user_profile.tags}"
+      user_history: "${user_profile.recent_interactions}"
+    output_var: ranked_results
+
+  # Step 4: 截断到上限
+  - id: gl_04_truncate
+    agent: global_aggregator
+    action: truncate_list
+    input: "${ranked_results}"
+    max_items: "${input.max_results}"
+    output_var: final_results
+
+output:
+  return: "${final_results}"
+  metadata:
+    total_before_truncate: "${merged_results.length}"
+    sources_contributed:
+      city: "${city_results.length}"
+      ecommerce: "${ecommerce_results.length}"
+      social: "${social_results.length}"
+    duplicates_removed: integer

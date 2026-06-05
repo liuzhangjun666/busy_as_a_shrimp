@@ -1,0 +1,11 @@
+{
+  "name": "@airp/ai-engine",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "node ../../scripts/run-ai-engine-python.mjs",
+    "build": "python ./scripts/qa.py build",
+    "lint": "python ./scripts/qa.py lint",
+    "test": "python ./scripts/qa.py test"
+  }
+}

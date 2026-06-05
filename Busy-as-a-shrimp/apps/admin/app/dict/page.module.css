@@ -1,0 +1,497 @@
+.page {
+  max-width: 1600px;
+  margin: 0 auto;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 24px;
+  min-height: calc(100vh - 80px);
+}
+
+.panel {
+  position: relative;
+  background: rgba(11, 17, 32, 0.8);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(30, 41, 59, 0.8);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 24px 48px rgba(2, 6, 23, 0.45);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.leftPanel {
+  flex: 1 1 auto;
+}
+
+.rightPanel {
+  flex: 1 1 auto;
+}
+
+.panelHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 20px;
+  border-bottom: 1px solid rgba(30, 41, 59, 0.5);
+}
+
+.panelTitle {
+  margin: 0;
+  color: #e2e8f0;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.panelSubtitle {
+  margin: 8px 0 0;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.typeList {
+  list-style: none;
+  margin: 0;
+  padding: 8px 0;
+  overflow: auto;
+}
+
+.typeItem {
+  width: 100%;
+  border: none;
+  border-left: 2px solid transparent;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 18px;
+  transition: background 0.2s ease, border-color 0.2s ease;
+  text-align: left;
+}
+
+.typeItem:hover {
+  background: rgba(30, 41, 59, 0.35);
+}
+
+.typeItemActive {
+  background: rgba(30, 58, 138, 0.2);
+  border-left-color: #3b82f6;
+}
+
+.typeName {
+  color: #cbd5e1;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.typeCode {
+  margin-top: 4px;
+  color: #64748b;
+  font-size: 12px;
+  font-family: "JetBrains Mono", monospace;
+}
+
+.typeStatus {
+  color: #64748b;
+  font-size: 11px;
+}
+
+.typeStatusEnabled {
+  color: #2dd4bf;
+}
+
+.skeletonWrap {
+  padding: 12px 16px;
+  display: grid;
+  gap: 12px;
+}
+
+.skeletonRow {
+  height: 52px;
+  border-radius: 10px;
+  background: rgba(30, 41, 59, 0.5);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+.rightBody {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.actionGroup {
+  display: inline-flex;
+  gap: 8px;
+}
+
+.ghostBtn {
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid #334155;
+  background: transparent;
+  color: #cbd5e1;
+  font-size: 12px;
+  padding: 0 12px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.ghostBtn:hover {
+  background: rgba(30, 41, 59, 0.7);
+  border-color: #475569;
+}
+
+.ghostBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.awaiting {
+  margin: auto 20px;
+  border: 1px dashed rgba(59, 130, 246, 0.35);
+  border-radius: 12px;
+  padding: 18px;
+  color: #94a3b8;
+  background: rgba(30, 58, 138, 0.08);
+  font-family: "JetBrains Mono", monospace;
+  text-align: center;
+}
+
+.dataList {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px 18px;
+  overflow: auto;
+}
+
+.dataCardButton {
+  border: none;
+  background: transparent;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+}
+
+.dataCard {
+  border: 1px solid rgba(51, 65, 85, 0.7);
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.55);
+  padding: 14px;
+  display: grid;
+  grid-template-columns: minmax(140px, 1.1fr) repeat(2, minmax(110px, 0.8fr)) minmax(90px, auto);
+  gap: 12px;
+  align-items: center;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.dataCardButton:hover .dataCard {
+  border-color: rgba(71, 85, 105, 0.95);
+}
+
+.dataCardSelected .dataCard {
+  border-color: rgba(59, 130, 246, 0.8);
+  background: rgba(30, 58, 138, 0.2);
+}
+
+.dataPrimary {
+  min-width: 0;
+}
+
+.dataLabel {
+  margin: 0;
+  color: #cbd5e1;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.dataCode {
+  margin-top: 4px;
+  color: #64748b;
+  font-size: 12px;
+  font-family: "JetBrains Mono", monospace;
+}
+
+.dataRemark {
+  margin: 8px 0 0;
+  color: #94a3b8;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.kvLabel {
+  color: #64748b;
+  font-size: 11px;
+}
+
+.kvValue {
+  margin-top: 2px;
+  color: #cbd5e1;
+  font-size: 13px;
+  font-family: "JetBrains Mono", monospace;
+}
+
+.statusBadge {
+  justify-self: end;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.statusNormal {
+  color: #2dd4bf;
+  background: rgba(45, 212, 191, 0.1);
+}
+
+.statusDisabled {
+  color: #fb7185;
+  background: rgba(251, 113, 133, 0.1);
+}
+
+.emptyText,
+.errorText {
+  margin: 16px 20px;
+  font-size: 13px;
+}
+
+.noticeText {
+  margin: 12px 20px 0;
+  border-radius: 10px;
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  background: rgba(99, 102, 241, 0.1);
+  color: #a5b4fc;
+  padding: 10px 12px;
+  font-size: 12px;
+}
+
+.emptyText {
+  color: #64748b;
+}
+
+.errorText {
+  color: #f87171;
+}
+
+.dialogBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  background: rgba(2, 6, 23, 0.65);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.dialogCard {
+  width: min(720px, 100%);
+  background: rgba(10, 15, 30, 0.96);
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  border-radius: 14px;
+  box-shadow: 0 30px 70px rgba(2, 6, 23, 0.6);
+}
+
+.dialogHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px 12px;
+  border-bottom: 1px solid rgba(51, 65, 85, 0.7);
+}
+
+.dialogTitle {
+  margin: 0;
+  color: #e2e8f0;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.dialogCloseBtn {
+  width: 30px;
+  height: 30px;
+  border: 1px solid rgba(71, 85, 105, 0.85);
+  border-radius: 8px;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.dialogCloseBtn:hover {
+  color: #cbd5e1;
+  background: rgba(30, 41, 59, 0.7);
+}
+
+.dialogForm {
+  padding: 14px 18px 18px;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.formField {
+  display: grid;
+  gap: 6px;
+}
+
+.formField > span {
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.formField input,
+.formField select,
+.formField textarea {
+  width: 100%;
+  border: 1px solid rgba(71, 85, 105, 0.9);
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.8);
+  color: #e2e8f0;
+  padding: 9px 10px;
+  font-size: 13px;
+  font-family: inherit;
+}
+
+.formField input:focus,
+.formField select:focus,
+.formField textarea:focus {
+  outline: none;
+  border-color: rgba(59, 130, 246, 0.9);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.formField textarea {
+  resize: vertical;
+}
+
+.formField input[readonly] {
+  color: #94a3b8;
+  cursor: not-allowed;
+}
+
+.formFieldFull {
+  grid-column: 1 / -1;
+}
+
+.dialogActions {
+  margin-top: 16px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.secondaryBtn,
+.primaryBtn {
+  min-width: 84px;
+  height: 34px;
+  border-radius: 8px;
+  border: 1px solid rgba(71, 85, 105, 0.9);
+  background: transparent;
+  color: #cbd5e1;
+  font-size: 12px;
+  padding: 0 14px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.secondaryBtn:hover,
+.primaryBtn:hover {
+  background: rgba(30, 41, 59, 0.75);
+}
+
+.primaryBtn {
+  border-color: rgba(59, 130, 246, 0.85);
+  background: rgba(37, 99, 235, 0.25);
+  color: #dbeafe;
+}
+
+.secondaryBtn:disabled,
+.primaryBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.neonEdge {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(to right, #1e3a8a, rgba(99, 102, 241, 0.5), transparent);
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@media (min-width: 1024px) {
+  .page {
+    flex-direction: row;
+  }
+
+  .leftPanel {
+    flex: 0 0 30%;
+    max-width: 30%;
+  }
+
+  .rightPanel {
+    flex: 0 0 70%;
+    max-width: 70%;
+  }
+}
+
+@media (max-width: 900px) {
+  .page {
+    padding: 16px;
+    min-height: calc(100vh - 72px);
+  }
+
+  .panelHeader {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .dataCard {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .statusBadge {
+    justify-self: start;
+  }
+
+  .formGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .dataCard {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+}

@@ -1,0 +1,144 @@
+@import "../../../node_modules/tw-animate-css/dist/tw-animate.css";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 轻量浅色基准 */
+:root {
+  --background: #f8f9fa;
+  --foreground: #0f172a;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  padding: 0;
+  margin: 0;
+  min-height: 100%;
+  background-color: #f8f9fa;
+}
+
+body {
+  font-family: "PingFang SC", "Microsoft YaHei", "Inter", sans-serif;
+  color: #0f172a;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.1) transparent;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  border-radius: 9999px;
+  background: rgba(0, 0, 0, 0.1);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.app-shell {
+  min-height: 100vh;
+}
+
+.top-nav {
+  position: sticky;
+  top: 12px;
+  z-index: 20;
+  max-width: 980px;
+  margin: 0 auto 16px;
+  padding: 10px 12px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.nav-link {
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-size: 14px;
+  color: #475569;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #e2e8f0;
+  backdrop-filter: blur(10px);
+}
+
+.nav-link:hover {
+  color: #1d4ed8;
+  background: #f8fafc;
+}
+
+.glass-card {
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 8px 30px rgb(0 0 0 / 4%);
+  border-radius: 24px;
+}
+
+@layer base {
+  :root {
+    --background: 210 40% 98%;
+    --foreground: 222.2 47.4% 11.2%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 47.4% 11.2%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 47.4% 11.2%;
+    --primary: 221.2 83.2% 53.3%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221.2 83.2% 53.3%;
+    --radius: 0.75rem;
+  }
+}
+
+@layer utilities {
+  .tracking-tighter {
+    letter-spacing: -0.05em;
+  }
+  
+  .animate-marquee {
+    display: inline-block;
+    white-space: nowrap;
+    animation: marquee 25s linear infinite;
+  }
+
+  .animate-marquee-loop {
+    animation: marquee-loop 24s linear infinite;
+    will-change: transform;
+  }
+}
+
+@keyframes marquee {
+  0% { transform: translateX(100%); }
+  100% { transform: translateX(-100%); }
+}
+
+@keyframes marquee-loop {
+  0% { transform: translate3d(0, 0, 0); }
+  100% { transform: translate3d(-50%, 0, 0); }
+}

@@ -1,0 +1,350 @@
+.page {
+  min-height: calc(100vh - 130px);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 14px;
+  border-radius: 22px;
+  background: #f4f4f5;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 4px 8px;
+}
+
+.title {
+  margin: 0;
+  font-size: 24px;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.subtitle {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: #71717a;
+}
+
+.pendingBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 80px;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #3f3f46;
+  background: #ffffff;
+  border: 1px solid #e4e4e7;
+}
+
+.notice {
+  margin: 0;
+  padding: 0 4px;
+  font-size: 13px;
+  color: #52525b;
+}
+
+.tableShell {
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e4e4e7;
+  overflow: hidden;
+}
+
+.tableScroll {
+  max-height: calc(100vh - 250px);
+  overflow: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  min-width: 900px;
+}
+
+.tableHeader tr {
+  background: rgba(244, 244, 245, 0.8);
+  backdrop-filter: blur(3px);
+}
+
+.headCell {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  height: 44px;
+  padding: 0 14px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #71717a;
+  border-bottom: 1px solid #e4e4e7;
+  background: rgba(244, 244, 245, 0.85);
+}
+
+.actionHead {
+  position: sticky;
+  right: 0;
+  z-index: 3;
+}
+
+.row {
+  background: #ffffff;
+  transition: background-color 180ms ease;
+}
+
+.row:hover {
+  background: rgba(244, 244, 245, 0.5);
+}
+
+.cell {
+  padding: 12px 14px;
+  border-bottom: 1px solid #f1f1f4;
+  vertical-align: middle;
+  font-size: 13px;
+  color: #18181b;
+}
+
+.actionCell {
+  position: sticky;
+  right: 0;
+  background: inherit;
+}
+
+.muted {
+  color: #71717a;
+  font-size: 12px;
+}
+
+.tagStack {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.miniTag {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: 11px;
+  line-height: 1.3;
+  color: #52525b;
+  background: #f4f4f5;
+}
+
+.riskList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.riskItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #e11d48;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.riskIcon {
+  width: 13px;
+  height: 13px;
+}
+
+.safeText {
+  color: #3f3f46;
+  font-size: 12px;
+}
+
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 3px 9px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #52525b;
+  background: #f4f4f5;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.approveButton,
+.rejectButton {
+  height: 30px;
+  border: 0;
+  border-radius: 8px;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 160ms ease, background-color 160ms ease;
+}
+
+.approveButton {
+  color: #059669;
+  background: transparent;
+}
+
+.approveButton:hover {
+  color: #047857;
+  background: #ecfdf3;
+}
+
+.rejectButton {
+  color: #e11d48;
+  background: transparent;
+}
+
+.rejectButton:hover {
+  color: #be123c;
+  background: #fff1f2;
+}
+
+.emptyCell {
+  padding: 40px 14px;
+  text-align: center;
+  font-size: 13px;
+  color: #71717a;
+}
+
+.skeletonBlock,
+.skeletonBlockSmall,
+.skeletonTag,
+.skeletonAction {
+  border-radius: 999px;
+  background: linear-gradient(90deg, #f4f4f5 0%, #ededf0 50%, #f4f4f5 100%);
+  background-size: 200% 100%;
+  animation: skeleton-flow 1.4s linear infinite;
+}
+
+.skeletonBlock {
+  width: 64px;
+  height: 13px;
+}
+
+.skeletonBlockSmall {
+  width: 54px;
+  height: 13px;
+}
+
+.skeletonTags,
+.skeletonActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.skeletonTag {
+  width: 56px;
+  height: 18px;
+}
+
+.skeletonAction {
+  width: 54px;
+  height: 24px;
+}
+
+.undoToast {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 520px;
+  border-radius: 14px;
+  border: 1px solid #e4e4e7;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 14px 28px rgba(24, 24, 27, 0.12);
+  backdrop-filter: blur(8px);
+  padding: 10px 12px;
+}
+
+.undoToastText {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #3f3f46;
+}
+
+.toastIcon {
+  width: 14px;
+  height: 14px;
+  color: #3f3f46;
+}
+
+.undoButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  border: 1px solid #d4d4d8;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #27272a;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 0 10px;
+  cursor: pointer;
+  transition: all 180ms ease;
+}
+
+.undoButton:hover {
+  transform: translateY(-1px);
+  background: #fafafa;
+  border-color: #a1a1aa;
+}
+
+.undoIcon {
+  width: 13px;
+  height: 13px;
+}
+
+@keyframes skeleton-flow {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+@media (max-width: 900px) {
+  .page {
+    padding: 10px;
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .undoToast {
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    max-width: none;
+    justify-content: space-between;
+  }
+}
+

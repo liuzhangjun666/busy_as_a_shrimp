@@ -1,0 +1,145 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: airp-api
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      MYSQL_HOST: mysql
+      DATABASE_URL: mysql://root:${MYSQL_ROOT_PASSWORD}@mysql:3306/${MYSQL_DATABASE}
+      REDIS_HOST: redis
+      RABBITMQ_HOST: rabbitmq
+      ELASTICSEARCH_NODE: http://elasticsearch:9200
+      AI_ENGINE_BASE_URL: http://ai-engine:8088
+      API_PORT: 8081
+    ports:
+      - "8081:8081"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      rabbitmq:
+        condition: service_started
+      elasticsearch:
+        condition: service_started
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL}
+        NEXT_PUBLIC_APP_ENV: ${NEXT_PUBLIC_APP_ENV:-prod}
+    container_name: airp-web
+    environment:
+      NODE_ENV: production
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  admin:
+    build:
+      context: .
+      dockerfile: apps/admin/Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL}
+        NEXT_PUBLIC_APP_ENV: ${NEXT_PUBLIC_APP_ENV:-prod}
+    container_name: airp-admin
+    environment:
+      NODE_ENV: production
+    ports:
+      - "3002:3002"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  ai-engine:
+    build:
+      context: .
+      dockerfile: services/ai-engine-python/Dockerfile
+    container_name: airp-ai-engine
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      AI_ENGINE_DATABASE_URL: mysql+pymysql://root:${MYSQL_ROOT_PASSWORD}@mysql:3306/${MYSQL_DATABASE}
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: ${RABBITMQ_USER}
+      RABBITMQ_PASS: ${RABBITMQ_PASSWORD}
+      NESTJS_BASE_URL: http://api:8081
+    ports:
+      - "8088:8088"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_started
+      api:
+        condition: service_started
+    restart: unless-stopped
+
+  mysql:
+    image: mysql:8.0
+    container_name: airp-mysql
+    restart: unless-stopped
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_CHARSET: utf8mb4
+      MYSQL_COLLATION: utf8mb4_unicode_ci
+    volumes:
+      - mysql_data:/var/lib/mysql
+    ports:
+      - "3307:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 15s
+
+  redis:
+    image: redis:7
+    container_name: airp-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: airp-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+  elasticsearch:
+    image: elasticsearch:8.12.2
+    container_name: airp-es
+    restart: unless-stopped
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: -Xms512m -Xmx512m
+    ports:
+      - "9200:9200"
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+
+volumes:
+  mysql_data:
+  es_data:
