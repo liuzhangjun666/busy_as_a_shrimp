@@ -358,7 +358,7 @@ export function TopNav() {
             虾忙
           </Link>
 
-          <nav className="hidden md:flex flex-wrap items-center gap-1.5" aria-label="主导航">
+          <nav className="hidden md:flex flex-nowrap items-center gap-0.5 lg:gap-1.5" aria-label="主导航">
             {navItems.map((item) => (
               <Link
                 key={item.href}
