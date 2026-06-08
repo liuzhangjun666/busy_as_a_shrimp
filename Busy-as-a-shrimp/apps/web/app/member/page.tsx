@@ -123,13 +123,9 @@ function buildTierFeatures(planCode: string, baseFeatures: TierFeature[], monthl
     label:
       monthlyGiftPoints > 0
         ? `每月赠送 ${monthlyGiftPoints} 分身积分`
-        : "momo 赛博分身与月度积分",
-    enabled: monthlyGiftPoints > 0
+        : "momo 赛博分身（通过签到获取积分）",
+    enabled: true
   };
-
-  if (planCode === "free") {
-    return [giftedPointsFeature, ...baseFeatures];
-  }
 
   return [giftedPointsFeature, ...baseFeatures];
 }
@@ -143,7 +139,7 @@ function getFallbackMonthlyGiftPoints(planCode: string): number {
 
 function getPointUsageHint(planCode: string, monthlyGiftPoints = 0): string {
   if (planCode === "free" || monthlyGiftPoints <= 0) {
-    return "未开通会员时无法使用 momo 分身指令。";
+    return "免费用户可通过每日签到免费获取分身积分来使用 momo 指令。";
   }
   if (planCode === "monthly") {
     return `每月 ${monthlyGiftPoints} 积分，约可执行 15 次中等强度 momo 指令。`;
@@ -490,7 +486,7 @@ function MemberPageContent() {
           </Link>
         </div>
         <p className="mx-auto mt-3 max-w-2xl text-sm leading-7 text-slate-500">
-          分身积分仅用于执行 momo 赛博分身指令，会员每月自动补发当月额度；档位越高，可支撑的调度频率越高。
+          momo 赛博分身对所有完成三步曲激活的用户开放，积分可通过每日签到免费领取；会员每月额外自动补发积分额度，档位越高，可支撑的调度频率越高。
         </p>
       </header>
 

@@ -81,3 +81,8 @@ export async function getPublicCampusOpportunities(params?: { limit?: number }) 
 export function getMessageApi() {
   return createMessageApi(getWebClient());
 }
+
+import { createSignInApi } from "./signin-api";
+export function getSignInApi() {
+  return createSignInApi(getWebClient());
+}

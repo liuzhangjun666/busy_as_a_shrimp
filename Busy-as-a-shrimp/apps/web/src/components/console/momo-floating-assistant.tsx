@@ -24,7 +24,6 @@ export function MomoFloatingAssistant() {
   const activationQuery = useResourceActivationStatus(hydrated && isLoggedIn);
   const resourceCount = activationQuery.data?.length ?? 0;
   const isLocked = hydrated && isLoggedIn && !activationQuery.isPending && resourceCount === 0;
-  const isMember = memberLevel !== "FREE";
 
   const [sheetOpen, setSheetOpen] = useState(false);
   const [momoOpen, setMomoOpen] = useState(false);
@@ -136,10 +135,8 @@ export function MomoFloatingAssistant() {
             router.push(`/auth?redirect=${encodeURIComponent(pathname)}`);
             return;
           }
-          if (!isMember) {
-            router.push(
-              `/member?sourceAction=unlock_momo&returnTo=${encodeURIComponent(pathname)}`
-            );
+          if (isLocked) {
+            setSheetOpen(true);
             return;
           }
           setMomoOpen((prev) => !prev);

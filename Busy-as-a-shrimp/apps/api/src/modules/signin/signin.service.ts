@@ -28,13 +28,13 @@ export class SignInService {
       throw new BadRequestException("今日已完成能量签到");
     }
 
-    // 2. 检查分身是否存在（签到必须有分身）
-    const doppelganger = await this.prisma.cyberDoppelganger.findUnique({
+    // 2. 检查用户是否已完成新手三步曲（即拥有资源记录）
+    const hasResource = await this.prisma.resource.findFirst({
       where: { userId }
     });
 
-    if (!doppelganger) {
-      throw new BadRequestException("请先通过拉新、贡献或会员解锁赛博分身");
+    if (!hasResource) {
+      throw new BadRequestException("请先完成赛博分身激活三步曲以开启签到");
     }
 
     // 3. 计算连续签到天数 (Streak)

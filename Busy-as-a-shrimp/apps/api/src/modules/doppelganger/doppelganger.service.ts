@@ -226,7 +226,7 @@ export class DoppelgangerService {
     );
 
     if (!account.isMomoUnlocked) {
-      throw new ForbiddenException("momo 赛博分身仅对已开通会员用户开放");
+      throw new ForbiddenException("请先完成赛博分身激活三步曲后使用 momo 指令");
     }
 
     const updated = await this.consumePoints(userId, cost, {
@@ -251,8 +251,8 @@ export class DoppelgangerService {
     memberLevel: MemberLevel,
     memberExpire: Date | null
   ): Promise<PointAccountSummary> {
-    const isMomoUnlocked = this.isMembershipActive(memberLevel, memberExpire);
-    const monthlyGift = isMomoUnlocked ? getMembershipMonthlyPointGift(memberLevel) : 0;
+    const isMemberActive = this.isMembershipActive(memberLevel, memberExpire);
+    const monthlyGift = isMemberActive ? getMembershipMonthlyPointGift(memberLevel) : 0;
 
     const existingAccount = await this.prisma.cyberDoppelganger.findUnique({
       where: { userId }
@@ -260,7 +260,10 @@ export class DoppelgangerService {
 
     const doppelganger =
       existingAccount ??
-      (isMomoUnlocked ? await this.createOrUpdateDoppelganger(userId, 0) : null);
+      (isMemberActive ? await this.createOrUpdateDoppelganger(userId, 0) : null);
+
+    // momo 对所有完成三步曲激活的用户开放（有分身记录即视为已激活）
+    const isMomoUnlocked = doppelganger !== null;
 
     if (!doppelganger) {
       return {
@@ -271,7 +274,7 @@ export class DoppelgangerService {
       };
     }
 
-    if (!isMomoUnlocked || monthlyGift <= 0) {
+    if (!isMemberActive || monthlyGift <= 0) {
       return {
         balance: Number(doppelganger.balance),
         memberMonthlyPointsGift: monthlyGift,

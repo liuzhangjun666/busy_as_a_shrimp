@@ -1,11 +1,12 @@
 "use client";
 
-import { ArrowRight, Coins, Lock, ReceiptText, Sparkles } from "lucide-react";
+import { ArrowRight, Coins, Lock, ReceiptText, Sparkles, CheckCircle } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "@/hooks/use-toast";
 
-import { getDoppelgangerApi } from "../../src/api";
+import { getDoppelgangerApi, getSignInApi } from "../../src/api";
 import { useAuthStatus } from "../../src/stores/use-auth-status";
 import { useUserStore } from "../../src/stores/user-store";
 
@@ -49,6 +50,34 @@ export default function PointsPage() {
     queryFn: () => getDoppelgangerApi().getMyPointLedger(),
     enabled: hydrated && isLoggedIn && Boolean(token),
     staleTime: 20_000
+  });
+
+  const queryClient = useQueryClient();
+
+  const signinStatusQuery = useQuery({
+    queryKey: ["signin", "status"],
+    queryFn: () => getSignInApi().getStatus(),
+    enabled: hydrated && isLoggedIn && Boolean(token),
+    staleTime: 20_000
+  });
+
+  const signinMutation = useMutation({
+    mutationFn: () => getSignInApi().signIn(),
+    onSuccess: (data) => {
+      toast({
+        title: "签到成功",
+        description: `能量 +${data.points}！已连续签到 ${data.streakDays} 天。`
+      });
+      queryClient.invalidateQueries({ queryKey: POINT_LEDGER_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: ["signin", "status"] });
+    },
+    onError: (err: any) => {
+      toast({
+        variant: "destructive",
+        title: "签到失败",
+        description: err.message || "请求失败"
+      });
+    }
   });
 
   useEffect(() => {
@@ -146,6 +175,48 @@ export default function PointsPage() {
         </div>
       </header>
 
+      {/* 每日能量签到 */}
+      <section className="rounded-[32px] border border-cyan-100 bg-gradient-to-r from-cyan-50/40 via-blue-50/30 to-indigo-50/20 p-6 shadow-[0_18px_60px_rgb(15,23,42,0.03)] sm:p-8">
+        <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-2">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-cyan-100/80 px-3 py-1 text-xs font-semibold text-cyan-700">
+              <Sparkles className="h-3.5 w-3.5" />
+              每日能量签到
+            </span>
+            <h2 className="text-xl font-bold text-slate-900">
+              {signinStatusQuery.data?.signedToday
+                ? `今日已签到！已连续签到 ${signinStatusQuery.data?.streakDays} 天`
+                : "每日签到，免费领分身点数"}
+            </h2>
+            <p className="text-sm text-slate-500">
+              每天可领 5 能量点，每连续签到 7 天额外奖励 20 能量点，助你免费使用 momo 赛博分身。
+            </p>
+          </div>
+          <div>
+            <button
+              onClick={() => signinMutation.mutate()}
+              disabled={signinStatusQuery.data?.signedToday || signinMutation.isPending}
+              className={`inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-semibold transition-all duration-300 ${
+                signinStatusQuery.data?.signedToday
+                  ? "bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200/50"
+                  : "bg-slate-900 text-white hover:bg-slate-800 shadow-[0_4px_12px_rgba(15,23,42,0.15)] active:scale-95"
+              }`}
+            >
+              {signinMutation.isPending ? (
+                "签到中..."
+              ) : signinStatusQuery.data?.signedToday ? (
+                <>
+                  <CheckCircle className="h-4 w-4 text-emerald-500" />
+                  已签到
+                </>
+              ) : (
+                "立即签到"
+              )}
+            </button>
+          </div>
+        </div>
+      </section>
+
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <article className="rounded-[28px] border border-slate-100 bg-white p-5 shadow-[0_14px_40px_rgb(15,23,42,0.05)]">
           <div className="flex items-center gap-3 text-cyan-600">
@@ -189,7 +260,7 @@ export default function PointsPage() {
             {summary.momoUnlocked ? "已解锁" : "未解锁"}
           </p>
           <p className="mt-2 text-sm text-slate-500">
-            {summary.momoUnlocked ? "已开通会员，可直接消耗积分执行指令。" : "开通会员后即可获得积分并使用 momo。"}
+            {summary.momoUnlocked ? "已完成三步曲激活，可以直接消耗积分执行指令。" : "完成三步曲激活即可解锁 momo，并通过每日签到获取积分。"}
           </p>
         </article>
       </section>

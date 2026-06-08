@@ -389,12 +389,6 @@ export function ExecutionConsole({
       return;
     }
 
-    if (memberLevel === "FREE") {
-      addLog("error", "momo 赛博分身仅对会员开放，请先开通星际通行证。");
-      setIsExecuting(false);
-      router.push("/member?sourceAction=unlock_momo");
-      return;
-    }
 
     addLog("info", "执行中：正在解析指令并下发任务，请稍候...");
 
@@ -748,7 +742,7 @@ export function ExecutionConsole({
           <p className="text-xs text-slate-500">
             {isExecuting
               ? "任务执行中，请等待结果返回；完成后会自动跳转。"
-              : `当前为会员快捷执行模式，请点击上方动作卡片发起任务。当前积分 ${pointsBalance.toFixed(2)}，本月已发放 ${currentMonthGrantedPoints.toFixed(2)} / ${memberMonthlyPointsGift.toFixed(2)}。`}
+              : `当前为快捷执行模式，请点击上方动作卡片发起任务。当前积分 ${pointsBalance.toFixed(2)}，本月已发放 ${currentMonthGrantedPoints.toFixed(2)} / ${memberMonthlyPointsGift.toFixed(2)}。`}
           </p>
         </div>
 
