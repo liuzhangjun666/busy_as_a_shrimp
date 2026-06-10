@@ -29,10 +29,7 @@ import { useUserStore } from "@/stores/user-store";
 import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import dynamic from "next/dynamic";
 import { startProgress } from "@/components/page-progress-bar";
-
-const MessageBell = dynamic(() => import("./chat/message-bell"), { ssr: false });
 import {
   Drawer,
   DrawerClose,
@@ -386,8 +383,6 @@ export function TopNav() {
                   发布资源
                 </Button>
               </Link>
-
-              <MessageBell />
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>

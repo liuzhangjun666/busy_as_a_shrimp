@@ -10,7 +10,6 @@ import { ActivationGuard } from "../src/components/activation/activation-guard";
 import { TopAnnouncementTicker } from "../src/components/top-announcement-ticker";
 import { SiteFooter } from "../src/components/site-footer";
 import { DeferredGlobalWidgets } from "../src/components/deferred-global-widgets";
-import Script from "next/script";
 import "./globals.css";
 import { Suspense } from "react";
 
@@ -44,8 +43,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <main className="pb-8">{children}</main>
             </div>
             <SiteFooter />
-
-            <Script src="https://cdn.socket.io/4.7.5/socket.io.min.js" strategy="lazyOnload" />
             <DeferredGlobalWidgets />
             <Toaster />
           </QueryProvider>

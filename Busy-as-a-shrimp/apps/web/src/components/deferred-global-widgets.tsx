@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 
-const ChatDrawer = dynamic(() => import("./chat/chat-drawer"), { ssr: false });
 const MomoFloatingAssistant = dynamic(
   () => import("./console/momo-floating-assistant").then((mod) => mod.MomoFloatingAssistant),
   { ssr: false }
@@ -42,7 +41,6 @@ export function DeferredGlobalWidgets() {
 
   return (
     <>
-      <ChatDrawer />
       <MomoFloatingAssistant />
     </>
   );
