@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { BadRequestException, Injectable, Logger } from "@nestjs/common";
 import { PrismaService } from "../../common/prisma.service";
 import { AiBriefIngestService, AiBriefIngestResult } from "./ai-brief-ingest.service";
@@ -100,6 +101,23 @@ export interface PublicRefreshResult {
   cooldownSeconds: number;
   skipped: boolean;
   reason?: string;
+  accepted?: boolean;
+  running?: boolean;
+  jobId?: string;
+  result?: AiBriefIngestResult | SoloSignalIngestResult;
+}
+
+type RefreshModule = "ai_brief" | "solo_signal";
+type RefreshStatus = "running" | "succeeded" | "failed";
+
+export interface PublicRefreshJobStatus {
+  jobId: string;
+  module: RefreshModule;
+  status: RefreshStatus;
+  triggeredAt: string;
+  startedAt: string;
+  finishedAt?: string;
+  error?: string;
   result?: AiBriefIngestResult | SoloSignalIngestResult;
 }
 
@@ -109,6 +127,11 @@ export class PublicService {
   private lastAiBriefRefreshAt = 0;
   private lastSoloSignalRefreshAt = 0;
   private readonly refreshCooldownMs = 5 * 60 * 1000;
+  private aiBriefRefreshRunning = false;
+  private soloSignalRefreshRunning = false;
+  private readonly refreshJobs = new Map<string, PublicRefreshJobStatus>();
+  private aiBriefActiveJobId: string | null = null;
+  private soloSignalActiveJobId: string | null = null;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -363,46 +386,200 @@ export class PublicService {
 
   async refreshAiBriefs(): Promise<PublicRefreshResult> {
     const now = Date.now();
+    if (this.aiBriefRefreshRunning) {
+      return {
+        triggeredAt: new Date(this.lastAiBriefRefreshAt || now).toISOString(),
+        cooldownSeconds: 0,
+        skipped: true,
+        accepted: false,
+        running: true,
+        jobId: this.aiBriefActiveJobId ?? undefined,
+        reason: "AI快报正在后台同步，请稍后刷新列表查看结果"
+      };
+    }
+
     const diff = now - this.lastAiBriefRefreshAt;
     if (diff < this.refreshCooldownMs) {
       return {
         triggeredAt: new Date(this.lastAiBriefRefreshAt).toISOString(),
         cooldownSeconds: Math.ceil((this.refreshCooldownMs - diff) / 1000),
         skipped: true,
+        accepted: false,
+        running: false,
         reason: "AI快报刚刚同步过，请稍后再试"
       };
     }
 
     this.lastAiBriefRefreshAt = now;
-    const result = await this.aiBriefIngestService.ingestFromFeeds();
+    this.aiBriefRefreshRunning = true;
+    const job = this.createRefreshJob("ai_brief", now);
+    this.aiBriefActiveJobId = job.jobId;
+    void this.runAiBriefRefresh(job.jobId);
     return {
       triggeredAt: new Date(now).toISOString(),
-      cooldownSeconds: 0,
+      cooldownSeconds: Math.ceil(this.refreshCooldownMs / 1000),
       skipped: false,
-      result
+      accepted: true,
+      running: true,
+      jobId: job.jobId,
+      reason: "AI快报后台同步已启动，稍后刷新列表查看结果"
     };
   }
 
   async refreshSoloSignals(): Promise<PublicRefreshResult> {
     const now = Date.now();
+    if (this.soloSignalRefreshRunning) {
+      return {
+        triggeredAt: new Date(this.lastSoloSignalRefreshAt || now).toISOString(),
+        cooldownSeconds: 0,
+        skipped: true,
+        accepted: false,
+        running: true,
+        jobId: this.soloSignalActiveJobId ?? undefined,
+        reason: "AI一人公司正在后台同步，请稍后刷新列表查看结果"
+      };
+    }
+
     const diff = now - this.lastSoloSignalRefreshAt;
     if (diff < this.refreshCooldownMs) {
       return {
         triggeredAt: new Date(this.lastSoloSignalRefreshAt).toISOString(),
         cooldownSeconds: Math.ceil((this.refreshCooldownMs - diff) / 1000),
         skipped: true,
+        accepted: false,
+        running: false,
         reason: "AI一人公司刚刚同步过，请稍后再试"
       };
     }
 
     this.lastSoloSignalRefreshAt = now;
-    const result = await this.soloSignalIngestService.ingestFromSources();
+    this.soloSignalRefreshRunning = true;
+    const job = this.createRefreshJob("solo_signal", now);
+    this.soloSignalActiveJobId = job.jobId;
+    void this.runSoloSignalRefresh(job.jobId);
     return {
       triggeredAt: new Date(now).toISOString(),
-      cooldownSeconds: 0,
+      cooldownSeconds: Math.ceil(this.refreshCooldownMs / 1000),
       skipped: false,
-      result
+      accepted: true,
+      running: true,
+      jobId: job.jobId,
+      reason: "AI一人公司后台同步已启动，稍后刷新列表查看结果"
     };
+  }
+
+  getAiBriefRefreshStatus(jobId: string): PublicRefreshJobStatus {
+    return this.getRefreshJobStatus(jobId, "ai_brief");
+  }
+
+  getSoloSignalRefreshStatus(jobId: string): PublicRefreshJobStatus {
+    return this.getRefreshJobStatus(jobId, "solo_signal");
+  }
+
+  private createRefreshJob(module: RefreshModule, timestamp: number): PublicRefreshJobStatus {
+    const job: PublicRefreshJobStatus = {
+      jobId: randomUUID(),
+      module,
+      status: "running",
+      triggeredAt: new Date(timestamp).toISOString(),
+      startedAt: new Date(timestamp).toISOString()
+    };
+    this.refreshJobs.set(job.jobId, job);
+    this.pruneRefreshJobs();
+    return job;
+  }
+
+  private getRefreshJobStatus(jobId: string, module: RefreshModule): PublicRefreshJobStatus {
+    const normalizedJobId = jobId.trim();
+    if (!normalizedJobId) {
+      throw new BadRequestException("jobId is required");
+    }
+
+    const job = this.refreshJobs.get(normalizedJobId);
+    if (!job || job.module !== module) {
+      throw new BadRequestException("refresh job not found");
+    }
+
+    return job;
+  }
+
+  private updateRefreshJob(
+    jobId: string,
+    patch: Partial<Omit<PublicRefreshJobStatus, "jobId" | "module">>
+  ): void {
+    const current = this.refreshJobs.get(jobId);
+    if (!current) {
+      return;
+    }
+
+    this.refreshJobs.set(jobId, {
+      ...current,
+      ...patch
+    });
+  }
+
+  private pruneRefreshJobs(): void {
+    const jobs = Array.from(this.refreshJobs.values()).sort((a, b) =>
+      a.startedAt < b.startedAt ? -1 : 1
+    );
+
+    while (jobs.length > 20) {
+      const oldest = jobs.shift();
+      if (!oldest) {
+        break;
+      }
+      this.refreshJobs.delete(oldest.jobId);
+    }
+  }
+
+  private async runAiBriefRefresh(jobId: string): Promise<void> {
+    try {
+      const result = await this.aiBriefIngestService.ingestFromFeeds();
+      this.updateRefreshJob(jobId, {
+        status: "succeeded",
+        finishedAt: new Date().toISOString(),
+        result
+      });
+      this.logger.log(
+        `[AI快报] 后台同步完成，新增 ${result.inserted} 条，抓取 ${result.fetched} 条，失败源 ${result.errors} 个`
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.updateRefreshJob(jobId, {
+        status: "failed",
+        finishedAt: new Date().toISOString(),
+        error: message
+      });
+      this.logger.error(`[AI快报] 后台同步失败: ${message}`);
+    } finally {
+      this.aiBriefRefreshRunning = false;
+      this.aiBriefActiveJobId = null;
+    }
+  }
+
+  private async runSoloSignalRefresh(jobId: string): Promise<void> {
+    try {
+      const result = await this.soloSignalIngestService.ingestFromSources();
+      this.updateRefreshJob(jobId, {
+        status: "succeeded",
+        finishedAt: new Date().toISOString(),
+        result
+      });
+      this.logger.log(
+        `[AI一人公司] 后台同步完成，新增 ${result.inserted} 条，抓取 ${result.fetched} 条，失败源 ${result.errors} 个`
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.updateRefreshJob(jobId, {
+        status: "failed",
+        finishedAt: new Date().toISOString(),
+        error: message
+      });
+      this.logger.error(`[AI一人公司] 后台同步失败: ${message}`);
+    } finally {
+      this.soloSignalRefreshRunning = false;
+      this.soloSignalActiveJobId = null;
+    }
   }
 
   private normalizeLimit(limit?: number): number {

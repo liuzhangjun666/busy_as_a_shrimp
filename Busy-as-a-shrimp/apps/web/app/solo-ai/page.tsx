@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import {
   BriefcaseBusiness,
@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { getPublicTranslateApi, getSoloSignalApi } from "@/api";
+import type { SoloSignalRefreshJobStatus } from "@/api/solo-signal-api";
 import { useAuthStatus } from "@/stores/use-auth-status";
 import { useUserStore } from "@/stores/user-store";
 import { getErrorMessage } from "@/utils/error-message";
@@ -29,6 +30,9 @@ export default function SoloAiPage() {
   const [translatingId, setTranslatingId] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [showTranslated, setShowTranslated] = useState<Record<string, boolean>>({});
+  const [refreshJob, setRefreshJob] = useState<SoloSignalRefreshJobStatus | null>(null);
+  const [refreshNotice, setRefreshNotice] = useState<string | null>(null);
+  const refreshPollTimerRef = useRef<number | null>(null);
   const query = useInfiniteQuery({
     queryKey: ["solo-signals"],
     initialPageParam: undefined as string | undefined,
@@ -59,6 +63,90 @@ export default function SoloAiPage() {
   }, [records]);
   const hasPaidMembership =
     memberLevel === "PRO" || memberLevel === "YEARLY" || memberLevel === "LIFETIME";
+  const isRefreshJobRunning = refreshJob?.status === "running";
+  const refreshStatusText = useMemo(() => {
+    if (refreshJob?.status === "succeeded") {
+      const inserted = refreshJob.result?.inserted ?? 0;
+      const fetched = refreshJob.result?.fetched ?? 0;
+      return `同步完成：新增 ${inserted} 条，抓取 ${fetched} 条`;
+    }
+
+    if (refreshJob?.status === "failed") {
+      return `同步失败：${refreshJob.error ?? "请稍后重试"}`;
+    }
+
+    if (refreshJob?.status === "running") {
+      return refreshNotice ?? "AI一人公司后台同步中...";
+    }
+
+    return refreshNotice;
+  }, [refreshJob, refreshNotice]);
+  const refreshStatusClassName =
+    refreshJob?.status === "failed"
+      ? "text-rose-600"
+      : refreshJob?.status === "succeeded"
+        ? "text-emerald-700"
+        : "text-slate-500";
+
+  useEffect(() => {
+    return () => {
+      if (refreshPollTimerRef.current !== null) {
+        window.clearTimeout(refreshPollTimerRef.current);
+        refreshPollTimerRef.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!refreshJob || refreshJob.status !== "running") {
+      return;
+    }
+
+    let cancelled = false;
+
+    const poll = async () => {
+      try {
+        const nextStatus = await getSoloSignalApi().refreshStatus(refreshJob.jobId);
+        if (cancelled) {
+          return;
+        }
+
+        setRefreshJob(nextStatus);
+        if (nextStatus.status === "running") {
+          refreshPollTimerRef.current = window.setTimeout(() => {
+            void poll();
+          }, 2000);
+          return;
+        }
+
+        if (nextStatus.status === "succeeded") {
+          setRefreshNotice(null);
+          await query.refetch();
+          return;
+        }
+
+        setRefreshNotice(null);
+      } catch {
+        if (cancelled) {
+          return;
+        }
+
+        refreshPollTimerRef.current = window.setTimeout(() => {
+          void poll();
+        }, 4000);
+      }
+    };
+
+    void poll();
+
+    return () => {
+      cancelled = true;
+      if (refreshPollTimerRef.current !== null) {
+        window.clearTimeout(refreshPollTimerRef.current);
+        refreshPollTimerRef.current = null;
+      }
+    };
+  }, [query, refreshJob]);
 
   const goToMemberCheckout = (sourceAction: "header_cta" | "card_cta") => {
     const returnTo = "/solo-ai";
@@ -102,17 +190,36 @@ export default function SoloAiPage() {
   const handleRefresh = async () => {
     try {
       setRefreshing(true);
+      setRefreshNotice(null);
       const result = await getSoloSignalApi().refresh();
-      await query.refetch();
 
       if (result.skipped) {
-        window.alert(result.reason ?? `请在 ${result.cooldownSeconds} 秒后再试`);
+        if (result.running && result.jobId) {
+          setRefreshJob({
+            jobId: result.jobId,
+            module: "solo_signal",
+            status: "running",
+            triggeredAt: result.triggeredAt,
+            startedAt: result.triggeredAt
+          });
+          setRefreshNotice(result.reason ?? "AI一人公司后台同步中...");
+          return;
+        }
+
+        setRefreshNotice(result.reason ?? `请在 ${result.cooldownSeconds} 秒后再试`);
         return;
       }
 
-      const inserted = result.result?.inserted ?? 0;
-      const fetched = result.result?.fetched ?? 0;
-      window.alert(`AI一人公司同步完成：新增 ${inserted} 条，抓取 ${fetched} 条`);
+      if (result.jobId) {
+        setRefreshJob({
+          jobId: result.jobId,
+          module: "solo_signal",
+          status: "running",
+          triggeredAt: result.triggeredAt,
+          startedAt: result.triggeredAt
+        });
+      }
+      setRefreshNotice(result.reason ?? "AI一人公司后台同步已启动，稍后将自动刷新列表");
     } catch (error) {
       window.alert(`刷新失败：${getErrorMessage(error)}`);
     } finally {
@@ -144,37 +251,44 @@ export default function SoloAiPage() {
               ) : null}
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
-              {hasPaidMembership ? (
-                <button
-                  type="button"
-                  onClick={() => router.push("/sop-library")}
-                  className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 transition-all hover:bg-emerald-100"
-                >
-                  SOP模板库已解锁，立即进入
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => goToMemberCheckout("header_cta")}
-                  className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-slate-800"
-                >
-                  解锁SOP模板库（会员）
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={() => void handleRefresh()}
-                disabled={refreshing}
-                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-all hover:bg-slate-50"
-              >
-                {refreshing ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
+            <div className="flex flex-col items-start gap-2 md:items-end">
+              <div className="flex flex-wrap items-center gap-2">
+                {hasPaidMembership ? (
+                  <button
+                    type="button"
+                    onClick={() => router.push("/sop-library")}
+                    className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 transition-all hover:bg-emerald-100"
+                  >
+                    SOP模板库已解锁，立即进入
+                  </button>
                 ) : (
-                  <RefreshCw className="h-4 w-4" />
+                  <button
+                    type="button"
+                    onClick={() => goToMemberCheckout("header_cta")}
+                    className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-slate-800"
+                  >
+                    解锁SOP模板库（会员）
+                  </button>
                 )}
-                {refreshing ? "同步中..." : "刷新"}
-              </button>
+                <button
+                  type="button"
+                  onClick={() => void handleRefresh()}
+                  disabled={refreshing || isRefreshJobRunning}
+                  className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-all hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {refreshing || isRefreshJobRunning ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4" />
+                  )}
+                  {refreshing || isRefreshJobRunning ? "同步中..." : "刷新"}
+                </button>
+              </div>
+              {refreshStatusText ? (
+                <p className={`text-xs font-medium ${refreshStatusClassName}`}>
+                  {refreshStatusText}
+                </p>
+              ) : null}
             </div>
           </div>
 

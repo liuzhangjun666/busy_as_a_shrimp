@@ -20,6 +20,25 @@ export interface AiBriefRefreshResponse {
   cooldownSeconds: number;
   skipped: boolean;
   reason?: string;
+  accepted?: boolean;
+  running?: boolean;
+  jobId?: string;
+  result?: {
+    inserted: number;
+    fetched: number;
+    sources: number;
+    errors: number;
+  };
+}
+
+export interface AiBriefRefreshJobStatus {
+  jobId: string;
+  module: "ai_brief";
+  status: "running" | "succeeded" | "failed";
+  triggeredAt: string;
+  startedAt: string;
+  finishedAt?: string;
+  error?: string;
   result?: {
     inserted: number;
     fetched: number;
@@ -43,6 +62,12 @@ export function createAiBriefApi(client: Pick<HttpClientLike, "get" | "post">) {
     },
     refresh(): Promise<AiBriefRefreshResponse> {
       return client.post<AiBriefRefreshResponse>("/public/ai-briefs/refresh", {});
+    },
+    refreshStatus(jobId: string): Promise<AiBriefRefreshJobStatus> {
+      const query = new URLSearchParams({ jobId });
+      return client.get<AiBriefRefreshJobStatus>(
+        `/public/ai-briefs/refresh-status?${query.toString()}`
+      );
     }
   };
 }

@@ -37,6 +37,12 @@ interface ParsedRawItem {
   identity: string;
 }
 
+interface ParsedSourceBatch {
+  records: ParsedSoloSignal[];
+  scanned: number;
+  accepted: number;
+}
+
 export interface SoloSignalIngestResult {
   inserted: number;
   fetched: number;
@@ -84,6 +90,31 @@ const INCOME_KEYWORDS = [
   "变现",
   "营收"
 ];
+const BUSINESS_KEYWORDS = [
+  "startup",
+  "founder",
+  "founders",
+  "indie",
+  "saas",
+  "micro saas",
+  "micro-saas",
+  "ship",
+  "shipping",
+  "launch",
+  "launched",
+  "build",
+  "built",
+  "studio",
+  "automation business",
+  "side project",
+  "solo founder",
+  "bootstrapped",
+  "bootstrapping",
+  "创业",
+  "独立开发",
+  "一人公司",
+  "副业"
+];
 
 @Injectable()
 export class SoloSignalIngestService {
@@ -109,8 +140,11 @@ export class SoloSignalIngestService {
     for (const feed of rssFeeds) {
       try {
         const xml = await this.fetchText(feed.url);
-        const records = this.parseRssAndAtom(xml, feed);
-        for (const record of records) {
+        const batch = this.parseRssAndAtom(xml, feed);
+        this.logger.log(
+          `[SoloSignal] RSS parsed: ${feed.name} -> scanned ${batch.scanned}, accepted ${batch.accepted}`
+        );
+        for (const record of batch.records) {
           if (!aggregate.has(record.externalId)) {
             aggregate.set(record.externalId, record);
           }
@@ -127,8 +161,11 @@ export class SoloSignalIngestService {
     for (const source of domSources) {
       try {
         const html = await this.fetchText(source.url);
-        const records = this.parseDomSource(html, source);
-        for (const record of records) {
+        const batch = this.parseDomSource(html, source);
+        this.logger.log(
+          `[SoloSignal] DOM parsed: ${source.name} -> scanned ${batch.scanned}, accepted ${batch.accepted}`
+        );
+        for (const record of batch.records) {
           if (!aggregate.has(record.externalId)) {
             aggregate.set(record.externalId, record);
           }
@@ -144,6 +181,9 @@ export class SoloSignalIngestService {
 
     const records = Array.from(aggregate.values());
     if (records.length === 0) {
+      this.logger.warn(
+        `[SoloSignal] no records accepted. rss=${rssFeeds.length}, dom=${domSources.length}, errors=${errors}. This usually means sources were unreachable or the keyword filters were too strict.`
+      );
       return {
         inserted: 0,
         fetched: 0,
@@ -269,22 +309,29 @@ export class SoloSignalIngestService {
     return response.data;
   }
 
-  private parseRssAndAtom(xml: string, feed: FeedConfig): ParsedSoloSignal[] {
+  private parseRssAndAtom(xml: string, feed: FeedConfig): ParsedSourceBatch {
     const maxPerSource = this.resolvePositiveInt("SOLO_SIGNAL_MAX_PER_SOURCE", 20, 1, 100);
     const parsed = this.parser.parse(xml) as Record<string, unknown>;
     const rssItems = this.parseRssItems(parsed, feed);
     const atomItems = this.parseAtomItems(parsed, feed);
-
-    return [...rssItems, ...atomItems]
+    const rawItems = [...rssItems, ...atomItems];
+    const records = rawItems
       .map((item) => this.toSoloSignal(feed.name, item))
       .filter((item): item is ParsedSoloSignal => Boolean(item))
       .slice(0, maxPerSource);
+
+    return {
+      records,
+      scanned: rawItems.length,
+      accepted: records.length
+    };
   }
 
-  private parseDomSource(html: string, source: DomSourceConfig): ParsedSoloSignal[] {
+  private parseDomSource(html: string, source: DomSourceConfig): ParsedSourceBatch {
     const maxPerSource = this.resolvePositiveInt("SOLO_SIGNAL_MAX_PER_SOURCE", 20, 1, 100);
     const anchorRegex = /<a\b([^>]*?)href=["']([^"']+)["']([^>]*)>([\s\S]*?)<\/a>/gi;
     const records: ParsedSoloSignal[] = [];
+    let scanned = 0;
 
     let match: RegExpExecArray | null;
     while ((match = anchorRegex.exec(html)) !== null) {
@@ -313,6 +360,7 @@ export class SoloSignalIngestService {
         publishedAt: new Date(),
         identity: `${sourceUrl}|${anchorText}`
       };
+      scanned += 1;
 
       const normalized = this.toSoloSignal(source.name, rawItem);
       if (!normalized) {
@@ -325,7 +373,11 @@ export class SoloSignalIngestService {
       }
     }
 
-    return records;
+    return {
+      records,
+      scanned,
+      accepted: records.length
+    };
   }
 
   private extractNearbySummary(
@@ -444,7 +496,8 @@ export class SoloSignalIngestService {
     const merged = `${title} ${summary}`.toLowerCase();
     const hasAiKeyword = AI_KEYWORDS.some((keyword) => merged.includes(keyword));
     const hasIncomeKeyword = INCOME_KEYWORDS.some((keyword) => merged.includes(keyword));
-    if (!hasAiKeyword || !hasIncomeKeyword) {
+    const hasBusinessKeyword = BUSINESS_KEYWORDS.some((keyword) => merged.includes(keyword));
+    if (!hasAiKeyword || (!hasIncomeKeyword && !hasBusinessKeyword)) {
       return null;
     }
 

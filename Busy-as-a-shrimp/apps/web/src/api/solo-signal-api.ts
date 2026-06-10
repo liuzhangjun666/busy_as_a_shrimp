@@ -21,6 +21,25 @@ export interface SoloSignalRefreshResponse {
   cooldownSeconds: number;
   skipped: boolean;
   reason?: string;
+  accepted?: boolean;
+  running?: boolean;
+  jobId?: string;
+  result?: {
+    inserted: number;
+    fetched: number;
+    sources: number;
+    errors: number;
+  };
+}
+
+export interface SoloSignalRefreshJobStatus {
+  jobId: string;
+  module: "solo_signal";
+  status: "running" | "succeeded" | "failed";
+  triggeredAt: string;
+  startedAt: string;
+  finishedAt?: string;
+  error?: string;
   result?: {
     inserted: number;
     fetched: number;
@@ -47,6 +66,12 @@ export function createSoloSignalApi(client: Pick<HttpClientLike, "get" | "post">
     },
     refresh(): Promise<SoloSignalRefreshResponse> {
       return client.post<SoloSignalRefreshResponse>("/public/solo-signals/refresh", {});
+    },
+    refreshStatus(jobId: string): Promise<SoloSignalRefreshJobStatus> {
+      const query = new URLSearchParams({ jobId });
+      return client.get<SoloSignalRefreshJobStatus>(
+        `/public/solo-signals/refresh-status?${query.toString()}`
+      );
     }
   };
 }

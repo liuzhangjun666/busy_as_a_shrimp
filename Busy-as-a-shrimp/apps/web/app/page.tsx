@@ -1,13 +1,10 @@
 "use client";
 
 import {
-  CircleDot,
   Terminal,
   Globe,
-  BatteryCharging,
   Layers,
   LayoutList,
-  Megaphone,
   RotateCw,
   Download,
   Settings,
@@ -15,17 +12,14 @@ import {
   ArrowRight,
   BriefcaseBusiness,
   Newspaper,
-  Crown,
-  BarChart3,
-  ListChecks
+  ListChecks,
+  CircleDot
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 
-import { getMatchApi, getUserApi } from "@/api";
-import type { MatchItem } from "@/api/match-api";
-import { Skeleton } from "@/components/ui/skeleton";
+import { getUserApi } from "@/api";
 import { useAuthStatus } from "@/stores/use-auth-status";
 import { toast } from "@/hooks/use-toast";
 import { useCampusUnlockStatus } from "@/hooks/use-campus-unlock-status";
@@ -38,10 +32,6 @@ import {
   type CampusOpportunity
 } from "@/components/campus-recruitment-section";
 
-function isPendingMatch(status: MatchItem["status"]): boolean {
-  return status === "queued" || status === "pushed";
-}
-
 export default function HomePage() {
   return (
     <Suspense fallback={<section className="h-[calc(100vh-8rem)] w-full bg-slate-50" />}>
@@ -53,10 +43,8 @@ export default function HomePage() {
 function HomePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { hydrated, isLoggedIn, phone } = useAuthStatus();
+  const { hydrated, isLoggedIn } = useAuthStatus();
 
-  const [pendingCount, setPendingCount] = useState(0);
-  const [loadingPendingCount, setLoadingPendingCount] = useState(false);
   const [activeModule, setActiveModule] = useState<"home" | "console" | "campus">("home");
   const [campusRefreshToken, setCampusRefreshToken] = useState(0);
   const [campusLastRefreshedAt, setCampusLastRefreshedAt] = useState<Date | null>(null);
@@ -72,35 +60,6 @@ function HomePageContent() {
   const [isUnlockingCampus, setIsUnlockingCampus] = useState(false);
   const isCampusUnlocked = hydrated && isLoggedIn && campusUnlockQuery.data?.unlocked === true;
   const isLocked = hydrated && !isCampusUnlocked;
-
-  const loginStatusLabel = hydrated
-    ? !isLoggedIn
-      ? "未登录"
-      : phone
-        ? `已登录 (${phone})`
-        : "已登录"
-    : "加载中...";
-
-  async function loadPendingCount() {
-    if (!isLoggedIn) {
-      setPendingCount(0);
-      return;
-    }
-
-    setLoadingPendingCount(true);
-    try {
-      const list = await getMatchApi().list();
-      setPendingCount(list.filter((item) => isPendingMatch(item.status)).length);
-    } catch {
-      setPendingCount(0);
-    } finally {
-      setLoadingPendingCount(false);
-    }
-  }
-
-  useEffect(() => {
-    void loadPendingCount();
-  }, [isLoggedIn]);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -332,11 +291,6 @@ function HomePageContent() {
     window.URL.revokeObjectURL(downloadUrl);
   }, [campusExportRows]);
 
-  const navItemBaseClass =
-    "group flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-medium transition-all";
-  const navItemInactiveClass = "text-slate-600 hover:bg-slate-100 hover:text-slate-900";
-  const navIconBaseClass = "h-4 w-4 shrink-0";
-  const navIconInactiveClass = "text-slate-400 transition-colors group-hover:text-slate-600";
   const activeCampusFilterCount = campusFilters.locations.length + campusFilters.industries.length;
   const consoleLatencyMs = 12;
   const moduleCards = [
@@ -403,108 +357,8 @@ function HomePageContent() {
   ] as const;
 
   return (
-    <section className="relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] flex h-[calc(100vh-8rem)] min-h-[600px] w-screen overflow-hidden border border-slate-200 bg-slate-50 text-slate-900 shadow-2xl">
-      <aside className="z-40 flex w-64 shrink-0 flex-col border-r border-slate-200/60 bg-[#FCFCFC]">
-        <div className="border-b border-slate-100 p-5">
-          <div className="flex items-center gap-2 text-sm font-bold text-slate-800">
-            <Terminal className="h-4 w-4 text-blue-600" />
-            <span>中枢调度器</span>
-          </div>
-          <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-400">
-            系统控制面板
-          </p>
-        </div>
-
-        <div className="flex-1 space-y-1 overflow-y-auto p-4">
-          <div className="mb-2 mt-4 px-3 text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-400">
-            核心模块
-          </div>
-          <button
-            onClick={() => navigateToConsole()}
-            className={`${navItemBaseClass} ${navItemInactiveClass}`}
-          >
-            <Terminal className={`${navIconBaseClass} ${navIconInactiveClass}`} />
-            执行终端
-          </button>
-          <button
-            onClick={navigateToCampus}
-            className={`${navItemBaseClass} ${navItemInactiveClass}`}
-          >
-            <Globe className={`${navIconBaseClass} ${navIconInactiveClass}`} />
-            机会大厅
-          </button>
-          <button
-            onClick={() => navigateToConsole("/check_hp")}
-            className={`${navItemBaseClass} ${navItemInactiveClass}`}
-          >
-            <BatteryCharging className={`${navIconBaseClass} ${navIconInactiveClass}`} />
-            HP 状态管理
-          </button>
-          <button
-            onClick={() => navigateToConsole("/scan_ecom")}
-            className={`${navItemBaseClass} ${navItemInactiveClass}`}
-          >
-            <Layers className={`${navIconBaseClass} ${navIconInactiveClass}`} />
-            分身管家
-          </button>
-          <button
-            onClick={() => navigateToConsole("/view_logs")}
-            className={`${navItemBaseClass} ${navItemInactiveClass}`}
-          >
-            <LayoutList className={`${navIconBaseClass} ${navIconInactiveClass}`} />
-            任务日志
-          </button>
-          <Link href="/announcements" className={`${navItemBaseClass} ${navItemInactiveClass}`}>
-            <Megaphone className={`${navIconBaseClass} ${navIconInactiveClass}`} />
-            系统公告
-          </Link>
-        </div>
-
-        <div className="mt-auto space-y-5 border-t border-slate-100 bg-slate-50/50 p-5">
-          <div className="space-y-1.5">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-400">
-              运行环境
-            </p>
-            <div className="flex items-center gap-2">
-              <CircleDot className="h-3.5 w-3.5 animate-pulse text-emerald-500" />
-              <span className="font-mono text-xs text-slate-700">网络在线</span>
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-400">
-              鉴权状态
-            </p>
-            <p className="break-all font-mono text-xs text-slate-700">{loginStatusLabel}</p>
-            {!isLoggedIn && hydrated && (
-              <Link
-                href="/auth"
-                className="mt-0.5 inline-block text-[10px] font-bold text-blue-600 hover:text-blue-500 hover:underline"
-              >
-                {"-> 需要登录"}
-              </Link>
-            )}
-          </div>
-
-          <div className="space-y-1.5">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-400">
-              待决任务
-            </p>
-            {loadingPendingCount ? (
-              <Skeleton className="mt-1 h-4 w-12 rounded bg-slate-200" />
-            ) : (
-              <p className="font-mono text-xs text-slate-700">
-                <span className="inline-flex items-center justify-center rounded-md bg-blue-50 px-2 py-0.5 text-xs font-bold text-blue-600 ring-1 ring-inset ring-blue-500/10">
-                  {pendingCount}
-                </span>{" "}
-                项
-              </p>
-            )}
-          </div>
-        </div>
-      </aside>
-
-      <main className="relative flex-1 overflow-hidden bg-slate-50/50">
+    <section className="relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] min-h-[calc(100vh-8rem)] w-screen bg-slate-50 text-slate-900">
+      <main className="relative bg-slate-50/50">
         {activeModule === "campus" ? (
           <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-slate-200/60 bg-white/70 px-6 backdrop-blur-md">
             <div className="flex min-w-0 items-center">
@@ -557,9 +411,9 @@ function HomePageContent() {
           </header>
         ) : null}
         <div
-          className={`relative z-10 overflow-y-auto transition-[margin-right] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
-            activeModule === "campus" ? "h-[calc(100%-3.5rem)]" : "h-full"
-          } ${activeModule === "campus" && campusFilterSheetOpen ? "sm:mr-[360px]" : "mr-0"}`}
+          className={`relative z-10 transition-[margin-right] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+            activeModule === "campus" && campusFilterSheetOpen ? "sm:mr-[360px]" : "mr-0"
+          }`}
         >
           <div className="space-y-8 p-6">
             {activeModule === "home" ? (
@@ -773,60 +627,6 @@ function HomePageContent() {
                     </div>
                   </section>
 
-                  <section className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-                    <article className="rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-sm">
-                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-                        Design Baseline
-                      </p>
-                      <h3 className="mt-3 text-2xl font-bold tracking-tight text-slate-900">
-                        信息架构向成熟产品官网靠齐
-                      </h3>
-                      <p className="mt-3 text-sm leading-7 text-slate-500">
-                        这版首页参考主流 SaaS 站点的排版方式，强调可读性、路径引导和模块分发，
-                        让首次访问用户也能快速理解平台价值。
-                      </p>
-                      <div className="mt-5 space-y-3">
-                        <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                          先价值主张，再模块入口，降低首次认知成本。
-                        </div>
-                        <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                          统一按钮层级和卡片密度，避免视觉噪音。
-                        </div>
-                        <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                          保留业务跳转闭环，首页专注介绍和导流。
-                        </div>
-                      </div>
-                    </article>
-
-                    <article className="rounded-[1.75rem] border border-slate-200 bg-slate-900 p-6 text-white shadow-sm">
-                      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-300">
-                        <Crown className="h-4 w-4" />
-                        Premium Modules
-                      </div>
-                      <h3 className="mt-4 text-2xl font-black tracking-tight">
-                        会员与团长体系独立展示
-                      </h3>
-                      <p className="mt-3 text-sm leading-6 text-slate-300">
-                        在首页单独保留权益入口，避免被内容流淹没，同时强化商业化路径认知。
-                      </p>
-                      <div className="mt-6 grid gap-3">
-                        <Link
-                          href="/member"
-                          className="inline-flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold transition hover:bg-white/10"
-                        >
-                          星际通行证
-                          <Crown className="h-4 w-4" />
-                        </Link>
-                        <Link
-                          href="/captain"
-                          className="inline-flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold transition hover:bg-white/10"
-                        >
-                          团长中枢
-                          <BarChart3 className="h-4 w-4" />
-                        </Link>
-                      </div>
-                    </article>
-                  </section>
                 </div>
               </section>
             ) : activeModule === "console" ? (

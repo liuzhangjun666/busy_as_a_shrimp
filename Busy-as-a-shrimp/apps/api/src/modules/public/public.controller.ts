@@ -27,6 +27,11 @@ export class PublicController {
     return ok(await this.publicService.refreshAiBriefs(), "AI快报同步完成");
   }
 
+  @Get("ai-briefs/refresh-status")
+  async aiBriefRefreshStatus(@Query("jobId") jobId?: string) {
+    return ok(await this.publicService.getAiBriefRefreshStatus(jobId ?? ""));
+  }
+
   @Get("solo-signals")
   async soloSignals(@Query("limit") limit?: string, @Query("cursor") cursor?: string) {
     const parsedLimit = limit ? Number(limit) : undefined;
@@ -36,6 +41,11 @@ export class PublicController {
   @Post("solo-signals/refresh")
   async refreshSoloSignals() {
     return ok(await this.publicService.refreshSoloSignals(), "AI一人公司同步完成");
+  }
+
+  @Get("solo-signals/refresh-status")
+  async soloSignalRefreshStatus(@Query("jobId") jobId?: string) {
+    return ok(await this.publicService.getSoloSignalRefreshStatus(jobId ?? ""));
   }
 
   @Get("campus-opportunities")
